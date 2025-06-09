@@ -1,0 +1,58 @@
+import Link from "next/link";
+import { createClient } from "../../supabase/server";
+import { Button } from "./ui/button";
+import { User, UserCircle, FileText } from "lucide-react";
+import UserProfile from "./user-profile";
+
+export default async function Navbar() {
+  const supabase = createClient();
+
+  const {
+    data: { user },
+  } = await (await supabase).auth.getUser();
+
+  return (
+    <nav className="w-full border-b border-gray-200 bg-white py-3 sticky top-0 z-50 backdrop-blur-sm bg-white/95">
+      <div className="container mx-auto px-4 flex justify-between items-center">
+        <Link
+          href="/"
+          prefetch
+          className="flex items-center gap-2 text-xl font-bold text-gray-900"
+        >
+          <div className="w-8 h-8 bg-red-600 rounded-lg flex items-center justify-center">
+            <FileText className="w-5 h-5 text-white" />
+          </div>
+          <span>TranscriptPro</span>
+        </Link>
+        <div className="flex gap-4 items-center">
+          {user ? (
+            <>
+              <Link
+                href="/dashboard"
+                className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900"
+              >
+                <Button variant="outline">Dashboard</Button>
+              </Link>
+              <UserProfile />
+            </>
+          ) : (
+            <>
+              <Link
+                href="/sign-in"
+                className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900"
+              >
+                Sign In
+              </Link>
+              <Link
+                href="/sign-up"
+                className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700 transition-colors"
+              >
+                Sign Up
+              </Link>
+            </>
+          )}
+        </div>
+      </div>
+    </nav>
+  );
+}
