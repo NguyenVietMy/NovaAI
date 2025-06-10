@@ -149,3 +149,62 @@ export const checkUserSubscription = async (userId: string) => {
 
   return !!subscription;
 };
+
+export const getUserSubscriptionDetails = async (userId: string) => {
+  const supabase = await createClient();
+
+  const { data: subscription, error } = await supabase
+    .from("subscriptions")
+    .select("*")
+    .eq("user_id", userId)
+    .single();
+
+  if (error) {
+    return null;
+  }
+
+  return subscription;
+};
+
+export const processYouTubeTranscript = async (formData: FormData) => {
+  const url = formData.get("url")?.toString();
+
+  if (!url) {
+    return { error: "YouTube URL is required" };
+  }
+
+  // Mock processing delay
+  await new Promise((resolve) => setTimeout(resolve, 2000));
+
+  // Mock transcript data
+  const mockTranscript = `Welcome to this amazing video! In today's tutorial, we'll be exploring the fascinating world of technology and innovation. 
+
+First, let's discuss the importance of staying up-to-date with the latest trends in the industry. Technology is constantly evolving, and it's crucial for professionals to adapt and learn new skills.
+
+Next, we'll dive into some practical examples of how these technologies can be applied in real-world scenarios. From artificial intelligence to machine learning, there are countless opportunities to leverage these tools for business growth.
+
+Finally, we'll wrap up with some actionable tips that you can implement immediately in your own projects. Remember, the key to success is continuous learning and experimentation.
+
+Thank you for watching, and don't forget to subscribe for more content like this!`;
+
+  const mockSummary = `This video provides an overview of current technology trends and their practical applications. Key points include:
+
+• The importance of staying current with industry developments
+• Real-world applications of AI and machine learning
+• Actionable tips for immediate implementation
+• Emphasis on continuous learning and experimentation
+
+The content is educational and focuses on helping professionals adapt to technological changes in their field.`;
+
+  return {
+    success: true,
+    data: {
+      url,
+      title: "Sample YouTube Video - Technology Trends 2024",
+      duration: "8:45",
+      transcript: mockTranscript,
+      summary: mockSummary,
+      processedAt: new Date().toISOString(),
+    },
+  };
+};
