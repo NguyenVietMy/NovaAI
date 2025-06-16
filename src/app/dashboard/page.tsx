@@ -97,7 +97,6 @@ export default function Dashboard() {
       formData.append("url", url);
 
       const result = await processYouTubeTranscript(formData);
-
       if (result.error) {
         setError(result.error);
       } else if (result.success && result.data) {
