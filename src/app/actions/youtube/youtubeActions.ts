@@ -1,175 +1,9 @@
 "use server";
-import { promisify } from "util";
-import { encodedRedirect } from "@/utils/utils";
-import { redirect } from "next/navigation";
-import { createClient } from "../../supabase/server";
-import xml2js from "xml2js";
 import { spawn } from "child_process";
 import fs from "fs/promises";
 import path from "path";
 import { tmpdir } from "os";
-
-export const signUpAction = async (formData: FormData) => {
-  const email = formData.get("email")?.toString();
-  const password = formData.get("password")?.toString();
-  const fullName = formData.get("full_name")?.toString() || "";
-  const supabase = await createClient();
-
-  if (!email || !password) {
-    return encodedRedirect(
-      "error",
-      "/sign-up",
-      "Email and password are required"
-    );
-  }
-
-  const {
-    data: { user },
-    error,
-  } = await supabase.auth.signUp({
-    email,
-    password,
-    options: {
-      data: {
-        full_name: fullName,
-        email: email,
-      },
-    },
-  });
-
-  if (error) {
-    return encodedRedirect("error", "/sign-up", error.message);
-  }
-
-  return encodedRedirect(
-    "success",
-    "/sign-up",
-    "Thanks for signing up! Please check your email for a verification link."
-  );
-};
-
-export const signInAction = async (formData: FormData) => {
-  const email = formData.get("email") as string;
-  const password = formData.get("password") as string;
-  const supabase = await createClient();
-
-  const { error } = await supabase.auth.signInWithPassword({
-    email,
-    password,
-  });
-
-  if (error) {
-    return encodedRedirect("error", "/sign-in", error.message);
-  }
-
-  return redirect("/dashboard");
-};
-
-export const forgotPasswordAction = async (formData: FormData) => {
-  const email = formData.get("email")?.toString();
-  const supabase = await createClient();
-  const callbackUrl = formData.get("callbackUrl")?.toString();
-
-  if (!email) {
-    return encodedRedirect("error", "/forgot-password", "Email is required");
-  }
-
-  const { error } = await supabase.auth.resetPasswordForEmail(email, {});
-
-  if (error) {
-    return encodedRedirect(
-      "error",
-      "/forgot-password",
-      "Could not reset password"
-    );
-  }
-
-  if (callbackUrl) {
-    return redirect(callbackUrl);
-  }
-
-  return encodedRedirect(
-    "success",
-    "/forgot-password",
-    "Check your email for a link to reset your password."
-  );
-};
-
-export const resetPasswordAction = async (formData: FormData) => {
-  const supabase = await createClient();
-
-  const password = formData.get("password") as string;
-  const confirmPassword = formData.get("confirmPassword") as string;
-
-  if (!password || !confirmPassword) {
-    encodedRedirect(
-      "error",
-      "/protected/reset-password",
-      "Password and confirm password are required"
-    );
-  }
-
-  if (password !== confirmPassword) {
-    encodedRedirect(
-      "error",
-      "/dashboard/reset-password",
-      "Passwords do not match"
-    );
-  }
-
-  const { error } = await supabase.auth.updateUser({
-    password: password,
-  });
-
-  if (error) {
-    encodedRedirect(
-      "error",
-      "/dashboard/reset-password",
-      "Password update failed"
-    );
-  }
-
-  encodedRedirect("success", "/protected/reset-password", "Password updated");
-};
-
-export const signOutAction = async () => {
-  const supabase = await createClient();
-  await supabase.auth.signOut();
-  return redirect("/sign-in");
-};
-
-export const checkUserSubscription = async (userId: string) => {
-  const supabase = await createClient();
-
-  const { data: subscription, error } = await supabase
-    .from("subscriptions")
-    .select("*")
-    .eq("user_id", userId)
-    .eq("status", "active")
-    .single();
-
-  if (error) {
-    return false;
-  }
-
-  return !!subscription;
-};
-
-export const getUserSubscriptionDetails = async (userId: string) => {
-  const supabase = await createClient();
-
-  const { data: subscription, error } = await supabase
-    .from("subscriptions")
-    .select("*")
-    .eq("user_id", userId)
-    .single();
-
-  if (error) {
-    return null;
-  }
-
-  return subscription;
-};
+import OpenAI from "openai";
 
 //YOUTUBE HELPER FUNCTIONS
 const fetchYouTubeMetadata = async (videoId: string, apiKey: string) => {
@@ -248,7 +82,7 @@ export const processYouTubeTranscript = async (formData: FormData) => {
         title,
         duration,
         transcript,
-        summary: `Transcript retrieved via yt-dlp.`,
+        summary: await summarizeTranscript(transcript),
         processedAt: new Date().toISOString(),
       },
     };
@@ -326,4 +160,34 @@ const downloadAndParseVTT = async (videoId: string): Promise<string | null> => {
       }
     });
   });
+};
+
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
+
+const summarizeTranscript = async (text: string): Promise<string> => {
+  const maxLength = 8000;
+  const input = text.length > maxLength ? text.slice(0, maxLength) : text;
+
+  try {
+    const prompt = `Summarize the following YouTube transcript in 4-6 sentences:\n\n${input}`;
+    const chatResponse = await openai.chat.completions.create({
+      model: "gpt-3.5-turbo",
+      messages: [
+        {
+          role: "system",
+          content: "You summarize YouTube transcripts clearly and concisely.",
+        },
+        { role: "user", content: prompt },
+      ],
+      temperature: 0.7,
+      max_tokens: 300,
+    });
+
+    return (
+      chatResponse.choices[0].message.content?.trim() || "No summary available."
+    );
+  } catch (err) {
+    console.error("AI summary error:", JSON.stringify(err, null, 2));
+    return "Failed to generate summary.";
+  }
 };

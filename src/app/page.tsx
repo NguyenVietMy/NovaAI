@@ -22,7 +22,7 @@ export default async function Home() {
   } = await supabase.auth.getUser();
 
   const { data: plans, error } = await supabase.functions.invoke(
-    "supabase-functions-get-plans",
+    "supabase-functions-get-plans"
   );
 
   return (
@@ -47,8 +47,9 @@ export default async function Home() {
             {[
               {
                 icon: <Zap className="w-6 h-6" />,
-                title: "Bulk Processing",
-                description: "Process multiple YouTube videos simultaneously",
+                title: "AI summarization",
+                description:
+                  "Process your lengthy transcripts by summarizing with AI",
               },
               {
                 icon: <FileText className="w-6 h-6" />,
@@ -63,7 +64,8 @@ export default async function Home() {
               {
                 icon: <Globe className="w-6 h-6" />,
                 title: "Global Support",
-                description: "Works with YouTube videos worldwide",
+                description:
+                  "Works with YouTube videos worldwide, any language",
               },
             ].map((feature, index) => (
               <div

@@ -16,10 +16,8 @@ import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  processYouTubeTranscript,
-  getUserSubscriptionDetails,
-} from "../actions";
+import { getUserSubscriptionDetails } from "../actions/auth_actions/authActions";
+import { processYouTubeTranscript } from "../actions/youtube/youtubeActions";
 import { createClient } from "../../../supabase/client";
 import {
   FileText,

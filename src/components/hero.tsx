@@ -22,13 +22,13 @@ export default function Hero() {
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-red-600 to-orange-600">
                 YouTube
               </span>{" "}
-              Transcripts in Bulk
+              Transcripts and Summarize with AI
             </h1>
 
             <p className="text-xl text-gray-600 mb-12 max-w-2xl mx-auto leading-relaxed">
-              Extract transcripts from multiple YouTube videos instantly.
-              Support for TXT, SRT, and JSON formats with unlimited downloads
-              for Pro users.
+              Extract transcripts from YouTube videos instantly. Support for
+              TXT, SRT, and JSON formats with unlimited summarizations for Pro
+              users.
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
@@ -51,7 +51,7 @@ export default function Hero() {
             <div className="mt-16 flex flex-col sm:flex-row items-center justify-center gap-8 text-sm text-gray-600">
               <div className="flex items-center gap-2">
                 <Check className="w-5 h-5 text-green-500" />
-                <span>5 free downloads monthly</span>
+                <span>5 free summaries a day</span>
               </div>
               <div className="flex items-center gap-2">
                 <Check className="w-5 h-5 text-green-500" />
@@ -59,7 +59,7 @@ export default function Hero() {
               </div>
               <div className="flex items-center gap-2">
                 <Check className="w-5 h-5 text-green-500" />
-                <span>Bulk processing</span>
+                <span>Lightning fast processing</span>
               </div>
             </div>
 
