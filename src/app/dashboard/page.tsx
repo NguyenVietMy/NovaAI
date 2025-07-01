@@ -119,7 +119,10 @@ export default function Dashboard() {
     }
   };
 
-  const downloadTranscript = (format: "txt" | "srt" | "json") => {
+  const downloadTranscript = (
+    format: "txt" | "srt" | "json",
+    txtVariant?: "withTimestamp" | "plain"
+  ) => {
     if (!transcriptData) return;
 
     let content = "";
@@ -128,8 +131,15 @@ export default function Dashboard() {
 
     switch (format) {
       case "txt":
-        content = transcriptData.transcriptPlain;
-        filename = `transcript-${Date.now()}.txt`;
+        if (txtVariant === "withTimestamp") {
+          content = transcriptData.transcriptBlocks
+            .map((block) => `${block.start} - ${block.end}\n${block.text}`)
+            .join("\n\n");
+          filename = `transcript-${Date.now()}-with-timestamps.txt`;
+        } else {
+          content = transcriptData.transcriptPlain;
+          filename = `transcript-${Date.now()}.txt`;
+        }
         mimeType = "text/plain";
         break;
       case "srt":
@@ -371,21 +381,37 @@ export default function Dashboard() {
                   Transcript & Downloads
                 </span>
                 <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => downloadTranscript("txt")}
-                  >
-                    <Download className="mr-2 h-4 w-4" />
-                    TXT
-                  </Button>
+                  {/* TXT Dropdown */}
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="outline" size="sm">
+                        <Download className="mr-2 h-4 w-4" />
+                        .TXT
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="start">
+                      <DropdownMenuItem
+                        onClick={() =>
+                          downloadTranscript("txt", "withTimestamp")
+                        }
+                      >
+                        With Timestamps
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => downloadTranscript("txt", "plain")}
+                      >
+                        Without Timestamps
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                  {/* SRT and JSON Buttons */}
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={() => downloadTranscript("srt")}
                   >
                     <Download className="mr-2 h-4 w-4" />
-                    SRT
+                    .SRT
                   </Button>
                   <Button
                     variant="outline"
@@ -393,7 +419,7 @@ export default function Dashboard() {
                     onClick={() => downloadTranscript("json")}
                   >
                     <Download className="mr-2 h-4 w-4" />
-                    JSON
+                    .JSON
                   </Button>
                 </div>
               </CardTitle>
