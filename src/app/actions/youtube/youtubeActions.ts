@@ -4,6 +4,7 @@ import fs from "fs/promises";
 import path from "path";
 import { tmpdir } from "os";
 import OpenAI from "openai";
+import { supabase } from "../../../../supabase/supabase";
 
 //YOUTUBE HELPER FUNCTIONS
 const fetchYouTubeMetadata = async (videoId: string, apiKey: string) => {
@@ -64,6 +65,18 @@ export const processYouTubeTranscript = async (formData: FormData) => {
   const videoId = extractVideoId(url);
   if (!videoId) return { error: "Invalid YouTube URL." };
 
+  // --- CACHE CHECK ---
+  // Try to fetch cached response from Supabase
+  const { data: cached, error: cacheError } = await supabase
+    .from("youtube_transcript_cache")
+    .select("response")
+    .eq("video_id", videoId)
+    .single();
+  if (cached && cached.response) {
+    // Return cached response directly
+    return cached.response;
+  }
+
   try {
     const { title, duration } = await fetchYouTubeMetadata(videoId, apiKey);
 
@@ -79,7 +92,7 @@ export const processYouTubeTranscript = async (formData: FormData) => {
 
     const timedBlocks = await groupTimedTranscript(timed, 20);
 
-    return {
+    const response = {
       success: true,
       data: {
         url,
@@ -92,6 +105,18 @@ export const processYouTubeTranscript = async (formData: FormData) => {
         processedAt: new Date().toISOString(),
       },
     };
+
+    // --- CACHE STORE ---
+    // Store the response in Supabase for future requests
+    await supabase.from("youtube_transcript_cache").insert([
+      {
+        video_id: videoId,
+        url,
+        response,
+      },
+    ]);
+
+    return response;
   } catch (err: any) {
     console.error("Transcript error:", err);
     return { error: `Failed to fetch transcript: ${err.message}` };

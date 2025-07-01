@@ -60,6 +60,15 @@ OPENAI_API_KEY
 - `created_at` (timestamptz)
 - `modified_at` (timestamptz)
 
+### youtube_transcript_cache
+
+- `id` (uuid, primary key)
+- `video_id` (text, unique) — YouTube video ID
+- `url` (text) — original YouTube URL
+- `response` (jsonb) — full JSON returned by `processYouTubeTranscript`
+- `created_at` (timestamptz, default now)
+- 🔥 Indexed on `created_at` for fast cleanup & ordering
+
 ---
 
 ## 🔒 Row Level Security (RLS) Policies
