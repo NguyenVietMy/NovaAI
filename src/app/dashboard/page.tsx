@@ -17,9 +17,9 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getUserSubscriptionDetails } from "../actions/auth_actions/authActions";
-import { processYouTubeTranscript } from "../actions/youtube/youtubeActions";
+import { processYouTubeTranscript } from "../actions/youtube/youtubeTranscriptActions";
 import { createClient } from "../../../supabase/client";
-import type { TimedBlock } from "../actions/youtube/youtubeActions";
+import type { TimedBlock } from "../actions/youtube/youtubeTranscriptActions";
 import {
   FileText,
   Download,
