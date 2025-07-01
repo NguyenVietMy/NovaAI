@@ -31,7 +31,14 @@ import {
   CreditCard,
   Play,
   Clock,
+  Copy,
 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from "@/components/ui/dropdown-menu";
 
 interface TranscriptData {
   url: string;
@@ -66,6 +73,7 @@ export default function Dashboard() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [isInitialLoading, setIsInitialLoading] = useState(true);
+  const [copyStatus, setCopyStatus] = useState<string>("");
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -146,6 +154,28 @@ export default function Dashboard() {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+  };
+
+  const handleCopy = async (type: "withTimestamp" | "plain") => {
+    if (!transcriptData) return;
+    let text = "";
+    if (type === "withTimestamp") {
+      text = transcriptData.transcriptBlocks
+        .map((block) => `${block.start} - ${block.end}\n${block.text}`)
+        .join("\n\n");
+    } else {
+      text = transcriptData.transcriptPlain;
+    }
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopyStatus(
+        type === "withTimestamp" ? "Copied with timestamp!" : "Copied plain!"
+      );
+      setTimeout(() => setCopyStatus(""), 1500);
+    } catch {
+      setCopyStatus("Failed to copy");
+      setTimeout(() => setCopyStatus(""), 1500);
+    }
   };
 
   if (isInitialLoading) {
@@ -374,6 +404,36 @@ export default function Dashboard() {
                   <TabsTrigger value="plain">Full Transcript</TabsTrigger>
                   <TabsTrigger value="summary">AI Summary</TabsTrigger>
                 </TabsList>
+                {/* Copy Button Dropdown */}
+                <div className="mt-2 mb-4 flex items-center">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="flex gap-2"
+                      >
+                        <Copy className="h-4 w-4" />
+                        Copy
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="start">
+                      <DropdownMenuItem
+                        onClick={() => handleCopy("withTimestamp")}
+                      >
+                        Copy with timestamp
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleCopy("plain")}>
+                        Copy without timestamp
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                  {copyStatus && (
+                    <span className="ml-3 text-xs text-muted-foreground animate-fade-in">
+                      {copyStatus}
+                    </span>
+                  )}
+                </div>
                 <TabsContent value="plain" className="mt-4">
                   <div className="space-y-4 max-h-96 overflow-y-auto">
                     {transcriptData.transcriptBlocks.map((block, idx) => (
