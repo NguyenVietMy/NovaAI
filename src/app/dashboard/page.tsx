@@ -375,12 +375,20 @@ export default function Dashboard() {
                   <TabsTrigger value="summary">AI Summary</TabsTrigger>
                 </TabsList>
                 <TabsContent value="plain" className="mt-4">
-                  <div className="bg-muted/30 rounded-lg p-4 max-h-96 overflow-y-auto">
-                    <Textarea
-                      value={transcriptData.transcriptTimed}
-                      readOnly
-                      className="min-h-[300px] resize-none border-0 bg-transparent focus-visible:ring-0"
-                    />
+                  <div className="space-y-4 max-h-96 overflow-y-auto">
+                    {transcriptData.transcriptBlocks.map((block, idx) => (
+                      <div
+                        key={idx}
+                        className="bg-muted/50 rounded-lg p-4 border border-muted-foreground/10 shadow-sm"
+                      >
+                        <div className="text-xs text-muted-foreground mb-2 font-mono">
+                          {block.start} - {block.end}
+                        </div>
+                        <div className="text-sm leading-relaxed whitespace-pre-line">
+                          {block.text}
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </TabsContent>
                 <TabsContent value="summary" className="mt-4">
