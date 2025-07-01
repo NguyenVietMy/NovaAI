@@ -35,11 +35,12 @@ export default async function Home() {
         <div className="container mx-auto px-4">
           <div className="text-center mb-16">
             <h2 className="text-3xl font-bold mb-4">
-              Powerful Features for Content Creators
+              Unlock Powerful YouTube Productivity Features
             </h2>
             <p className="text-gray-600 max-w-2xl mx-auto">
-              Everything you need to extract and manage YouTube transcripts
-              efficiently and at scale.
+              Explore AI-powered tools to summarize, organize, and manage your
+              YouTube content. NovaAI helps creators, educators, and marketers
+              boost their workflow and creativity.
             </p>
           </div>
 
@@ -47,25 +48,27 @@ export default async function Home() {
             {[
               {
                 icon: <Zap className="w-6 h-6" />,
-                title: "AI summarization",
+                title: "AI Summarization",
                 description:
-                  "Process your lengthy transcripts by summarizing with AI",
+                  "Summarize videos, transcripts, and comments with advanced AI.",
               },
               {
                 icon: <FileText className="w-6 h-6" />,
                 title: "Multiple Formats",
-                description: "Export as TXT, SRT, or JSON formats",
+                description:
+                  "Export insights, summaries, and transcripts in various formats.",
               },
               {
                 icon: <Clock className="w-6 h-6" />,
-                title: "Instant Downloads",
-                description: "Get your transcripts in seconds, not minutes",
+                title: "Instant Results",
+                description:
+                  "Get your YouTube data and insights in seconds, not minutes.",
               },
               {
                 icon: <Globe className="w-6 h-6" />,
                 title: "Global Support",
                 description:
-                  "Works with YouTube videos worldwide, any language",
+                  "Works with YouTube videos worldwide, any language, any device.",
               },
             ].map((feature, index) => (
               <div
@@ -87,7 +90,7 @@ export default async function Home() {
           <div className="text-center mb-16">
             <h2 className="text-3xl font-bold mb-4">How It Works</h2>
             <p className="text-gray-600 max-w-2xl mx-auto">
-              Get your YouTube transcripts in three simple steps
+              Get started with NovaAI in three simple steps
             </p>
           </div>
 
@@ -98,25 +101,26 @@ export default async function Home() {
               </div>
               <h3 className="text-xl font-semibold mb-2">Paste YouTube URLs</h3>
               <p className="text-gray-600">
-                Add one or multiple YouTube video URLs to the input field
+                Add one or multiple YouTube video URLs to get started with any
+                tool
               </p>
             </div>
             <div className="text-center">
               <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
                 <span className="text-2xl font-bold text-red-600">2</span>
               </div>
-              <h3 className="text-xl font-semibold mb-2">Choose Format</h3>
+              <h3 className="text-xl font-semibold mb-2">Choose a Tool</h3>
               <p className="text-gray-600">
-                Select your preferred format: TXT, SRT, or JSON
+                Select from summarization, transcript, analytics, and more
               </p>
             </div>
             <div className="text-center">
               <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
                 <span className="text-2xl font-bold text-red-600">3</span>
               </div>
-              <h3 className="text-xl font-semibold mb-2">Download</h3>
+              <h3 className="text-xl font-semibold mb-2">Get Results</h3>
               <p className="text-gray-600">
-                Get your transcripts instantly and save them to your device
+                Instantly receive insights, downloads, and productivity boosts
               </p>
             </div>
           </div>
@@ -167,17 +171,17 @@ export default async function Home() {
       <section className="py-20 bg-gray-50">
         <div className="container mx-auto px-4 text-center">
           <h2 className="text-3xl font-bold mb-4">
-            Ready to Extract Your First Transcript?
+            Ready to Boost Your YouTube Productivity?
           </h2>
           <p className="text-gray-600 mb-8 max-w-2xl mx-auto">
-            Join content creators, researchers, and professionals who rely on
-            our transcript downloader.
+            Join creators, educators, and professionals using NovaAI to
+            supercharge their YouTube workflow.
           </p>
           <a
             href="/dashboard"
             className="inline-flex items-center px-8 py-4 text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors text-lg font-medium shadow-lg hover:shadow-xl"
           >
-            Start Downloading Free
+            Explore Tools Free
             <Download className="ml-2 w-5 h-5" />
           </a>
         </div>

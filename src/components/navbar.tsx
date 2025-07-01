@@ -22,19 +22,34 @@ export default async function Navbar() {
           <div className="w-8 h-8 bg-red-600 rounded-lg flex items-center justify-center">
             <FileText className="w-5 h-5 text-white" />
           </div>
-          <span>TranscriptPro</span>
+          <span>
+            NovaAI{" "}
+            <span className="text-xs font-normal text-gray-500">
+              YouTube Assistant
+            </span>
+          </span>
         </Link>
-        <div className="flex gap-4 items-center">
+        <div className="flex gap-6 items-center">
+          <Link
+            href="/ideas-brainstormer"
+            className="text-sm font-medium text-gray-700 hover:text-gray-900"
+          >
+            Script Generator
+          </Link>
+          <Link
+            href="#function2"
+            className="text-sm font-medium text-gray-700 hover:text-gray-900"
+          >
+            Function2
+          </Link>
+          <Link
+            href="/dashboard"
+            className="text-sm font-medium text-gray-700 hover:text-gray-900"
+          >
+            YouTube Transcript
+          </Link>
           {user ? (
-            <>
-              <Link
-                href="/dashboard"
-                className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900"
-              >
-                <Button variant="outline">Dashboard</Button>
-              </Link>
-              <UserProfile />
-            </>
+            <UserProfile />
           ) : (
             <>
               <Link

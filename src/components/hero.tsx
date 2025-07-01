@@ -13,22 +13,22 @@ export default function Hero() {
             <div className="flex justify-center mb-6">
               <div className="flex items-center gap-2 px-4 py-2 bg-red-100 text-red-700 rounded-full text-sm font-medium">
                 <FileText className="w-4 h-4" />
-                <span>YouTube Transcript Downloader</span>
+                <span>NovaAI - Your All-in-One YouTube Assistant</span>
               </div>
             </div>
 
             <h1 className="text-5xl sm:text-6xl font-bold text-gray-900 mb-8 tracking-tight">
-              Download{" "}
+              NovaAI: Your All-in-One{" "}
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-red-600 to-orange-600">
                 YouTube
               </span>{" "}
-              Transcripts and Summarize with AI
+              Assistant
             </h1>
 
             <p className="text-xl text-gray-600 mb-12 max-w-2xl mx-auto leading-relaxed">
-              Extract transcripts from YouTube videos instantly. Support for
-              TXT, SRT, and JSON formats with unlimited summarizations for Pro
-              users.
+              Explore the endless possibilities of boosting your YouTube
+              productivity. Summarize, organize, and supercharge your workflow
+              with our suite of AI-powered tools.
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
