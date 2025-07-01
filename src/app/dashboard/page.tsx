@@ -19,6 +19,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getUserSubscriptionDetails } from "../actions/auth_actions/authActions";
 import { processYouTubeTranscript } from "../actions/youtube/youtubeActions";
 import { createClient } from "../../../supabase/client";
+import type { TimedBlock } from "../actions/youtube/youtubeActions";
 import {
   FileText,
   Download,
@@ -36,7 +37,9 @@ interface TranscriptData {
   url: string;
   title: string;
   duration: string;
-  transcript: string;
+  transcriptPlain: string;
+  transcriptTimed: string;
+  transcriptBlocks: TimedBlock[];
   summary: string;
   processedAt: string;
 }
@@ -95,11 +98,11 @@ export default function Dashboard() {
       formData.append("url", url);
 
       const result = await processYouTubeTranscript(formData);
-      if (result.error) {
-        setError(result.error);
-      } else if (result.success && result.data) {
-        setTranscriptData(result.data);
+      if (result?.data) {
+        setTranscriptData(result.data as TranscriptData);
         setSuccess("Transcript generated successfully!");
+      } else if (result?.error) {
+        setError(result.error);
       }
     } catch (err) {
       setError("Failed to process video. Please try again.");
@@ -117,13 +120,13 @@ export default function Dashboard() {
 
     switch (format) {
       case "txt":
-        content = transcriptData.transcript;
+        content = transcriptData.transcriptPlain;
         filename = `transcript-${Date.now()}.txt`;
         mimeType = "text/plain";
         break;
       case "srt":
         // Mock SRT format
-        content = `1\n00:00:00,000 --> 00:00:10,000\n${transcriptData.transcript.substring(0, 100)}...\n\n2\n00:00:10,000 --> 00:00:20,000\n${transcriptData.transcript.substring(100, 200)}...`;
+        content = `1\n00:00:00,000 --> 00:00:10,000\n${transcriptData.transcriptPlain.substring(0, 100)}...\n\n2\n00:00:10,000 --> 00:00:20,000\n${transcriptData.transcriptPlain.substring(100, 200)}...`;
         filename = `transcript-${Date.now()}.srt`;
         mimeType = "text/plain";
         break;
@@ -366,15 +369,15 @@ export default function Dashboard() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <Tabs defaultValue="transcript" className="w-full">
+              <Tabs defaultValue="plain" className="w-full">
                 <TabsList className="grid w-full grid-cols-2">
-                  <TabsTrigger value="transcript">Full Transcript</TabsTrigger>
+                  <TabsTrigger value="plain">Full Transcript</TabsTrigger>
                   <TabsTrigger value="summary">AI Summary</TabsTrigger>
                 </TabsList>
-                <TabsContent value="transcript" className="mt-4">
+                <TabsContent value="plain" className="mt-4">
                   <div className="bg-muted/30 rounded-lg p-4 max-h-96 overflow-y-auto">
                     <Textarea
-                      value={transcriptData.transcript}
+                      value={transcriptData.transcriptTimed}
                       readOnly
                       className="min-h-[300px] resize-none border-0 bg-transparent focus-visible:ring-0"
                     />

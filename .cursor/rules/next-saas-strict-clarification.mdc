@@ -1,0 +1,33 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+---
+description: Always ask for clarifications if input is unclear, require sufficient context, do not speculate.
+alwaysApply: true
+---
+
+# Rule for Next.js SaaS with Supabase OAuth, Stripe, and YouTube Transcript Generation
+
+- 📝 When generating or editing code, **always ask clarifying questions** if the user's instructions are vague, incomplete, or ambiguous.  
+- 🔍 Request sufficient input such as:
+  - Required environment variables (`NEXT_PUBLIC_SUPABASE_URL`, `STRIPE_SECRET_KEY`, etc.)
+  - Database schema (Supabase tables, columns, relationships)
+  - Stripe product & pricing setup
+  - OAuth provider configurations
+- 🚫 **Do not speculate** or "fill in gaps" if details are missing.  
+- 🛠 If lacking critical information (e.g. callback URLs, table names), explicitly state what is missing and request it before proceeding.
+- 📄 Ensure any Next.js pages or API routes follow file conventions (`app/` or `pages/`) and include appropriate server/client directives.
+- ✅ Verify that Supabase hooks (`useUser`, `useSession`), Stripe client/server SDK usage, and YouTube API calls are properly authenticated.
+- 💬 Add brief inline comments in generated code snippets to explain key logic, especially around OAuth and payments.
+
+## Examples
+
+```txt
+// ✅ Good: Asks for missing details
+"Can you provide your Supabase schema for the 'users' and 'transcripts' tables so I can ensure foreign key relations are handled?"
+
+// ❌ Bad: Makes assumptions without checking
+"Let's assume your Stripe product has ID 'prod_123' and Supabase table is named 'my_table'." (Don't do this!)
+
