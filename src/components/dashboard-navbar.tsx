@@ -24,7 +24,10 @@ export default function DashboardNavbar() {
             <FileText className="w-5 h-5 text-white" />
           </div>
           <Link href="/" prefetch className="text-xl font-bold">
-            TranscriptPro
+            NovaAI{" "}
+            <span className="text-xs font-normal text-gray-500">
+              YouTube Assistant
+            </span>
           </Link>
         </div>
         <div className="flex gap-4 items-center">

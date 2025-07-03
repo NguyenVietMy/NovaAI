@@ -3,6 +3,12 @@ import { createClient } from "../../supabase/server";
 import { Button } from "./ui/button";
 import { User, UserCircle, FileText } from "lucide-react";
 import UserProfile from "./user-profile";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 export default async function Navbar() {
   const supabase = createClient();
@@ -30,24 +36,47 @@ export default async function Navbar() {
           </span>
         </Link>
         <div className="flex gap-6 items-center">
-          <Link
-            href="/ideas-brainstormer"
-            className="text-sm font-medium text-gray-700 hover:text-gray-900"
-          >
-            Script Generator
-          </Link>
-          <Link
-            href="#function2"
-            className="text-sm font-medium text-gray-700 hover:text-gray-900"
-          >
-            Function2
-          </Link>
-          <Link
-            href="/dashboard"
-            className="text-sm font-medium text-gray-700 hover:text-gray-900"
-          >
-            YouTube Transcript
-          </Link>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Link
+                  href="/ideas-brainstormer"
+                  className="text-sm font-medium text-gray-700 hover:text-gray-900"
+                >
+                  Script Generator
+                </Link>
+              </TooltipTrigger>
+              <TooltipContent side="bottom">
+                AI-generate video scripts from your own topics
+              </TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Link
+                  href="/video-outliner"
+                  className="text-sm font-medium text-gray-700 hover:text-gray-900"
+                >
+                  Video Outliner
+                </Link>
+              </TooltipTrigger>
+              <TooltipContent side="bottom">
+                Plan your next video with AI-generated outlines.
+              </TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Link
+                  href="/dashboard"
+                  className="text-sm font-medium text-gray-700 hover:text-gray-900"
+                >
+                  YouTube Transcript
+                </Link>
+              </TooltipTrigger>
+              <TooltipContent side="bottom">
+                Get YouTube transcript from video URL
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
           {user ? (
             <UserProfile />
           ) : (
