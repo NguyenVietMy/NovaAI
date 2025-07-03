@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import DashboardNavbar from "@/components/dashboard-navbar";
 import { Checkbox } from "@/components/ui/checkbox";
+import { generateVideoOutline } from "../actions/youtube/youtubeVideoOutliner";
 
 const SHORTS_DURATIONS = ["< 15 sec", "< 30 sec", "< 45 sec", "< 1 minute"];
 const VIDEO_DURATIONS = [
@@ -76,11 +77,44 @@ export default function VideoOutliner() {
   const [hookStyle, setHookStyle] = useState("");
   const [language, setLanguage] = useState("English");
   const [generateHashtags, setGenerateHashtags] = useState("no");
+  const [customLanguage, setCustomLanguage] = useState("");
+  const [result, setResult] = useState<{
+    outline: string;
+    hashtags: string[];
+  } | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
   // Reset duration if content type changes
   const handleContentTypeChange = (val: string) => {
     setContentType(val);
     setDuration("");
+  };
+
+  // Handler for Generate Outline button
+  const handleGenerate = async () => {
+    setLoading(true);
+    setError("");
+    setResult(null);
+    try {
+      const lang = language === "Other" ? customLanguage.trim() : language;
+      const res = await generateVideoOutline({
+        contentType,
+        duration,
+        topicType,
+        topic,
+        style,
+        audience,
+        hookStyle,
+        language: lang,
+        generateHashtags,
+      });
+      setResult(res);
+    } catch (err) {
+      setError("Failed to generate outline. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -252,6 +286,15 @@ export default function VideoOutliner() {
                     </option>
                   ))}
                 </select>
+                {language === "Other" && (
+                  <Input
+                    className="mt-2"
+                    type="text"
+                    placeholder="Enter custom language (e.g. Italian, Arabic, etc.)"
+                    value={customLanguage}
+                    onChange={(e) => setCustomLanguage(e.target.value)}
+                  />
+                )}
               </div>
               {/* Generate SEO Hashtags */}
               <div>
@@ -268,10 +311,79 @@ export default function VideoOutliner() {
                 </select>
               </div>
               <Separator />
-              <Button type="button" className="w-full" disabled>
-                Generate Outline (Coming Soon)
+              <Button
+                type="button"
+                className="w-full"
+                onClick={handleGenerate}
+                disabled={
+                  loading ||
+                  !topic ||
+                  !duration ||
+                  audience.length === 0 ||
+                  (language === "Other" && !customLanguage.trim())
+                }
+              >
+                {loading ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <svg
+                      className="animate-spin h-5 w-5 text-white"
+                      viewBox="0 0 24 24"
+                    >
+                      <circle
+                        className="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                        fill="none"
+                      />
+                      <path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8v8z"
+                      />
+                    </svg>
+                    Generating...
+                  </span>
+                ) : (
+                  "Generate Outline"
+                )}
               </Button>
             </form>
+            {/* Results Section */}
+            <div className="mt-8">
+              {error && (
+                <div className="text-red-500 text-center mb-4">{error}</div>
+              )}
+              {result && !loading && (
+                <Card className="mt-6 bg-muted/50">
+                  <CardHeader>
+                    <CardTitle>Generated Outline</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <pre className="whitespace-pre-wrap text-sm mb-4">
+                      {result.outline}
+                    </pre>
+                    {result.hashtags.length > 0 && (
+                      <div className="mt-4">
+                        <div className="font-semibold mb-2">SEO Hashtags:</div>
+                        <div className="flex flex-wrap gap-2">
+                          {result.hashtags.map((tag, idx) => (
+                            <span
+                              key={idx}
+                              className="bg-gray-200 rounded px-2 py-1 text-xs font-mono"
+                            >
+                              {tag}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
+            </div>
           </CardContent>
         </Card>
       </main>
