@@ -6,7 +6,11 @@ import { tmpdir } from "os";
 import OpenAI from "openai";
 import { supabase } from "../../../../supabase/supabase";
 
-//YOUTUBE HELPER FUNCTIONS
+// --- YOUTUBE HELPER FUNCTIONS ---
+
+/**
+ * Fetches metadata (title and duration) from YouTube for a given video ID.
+ */
 const fetchYouTubeMetadata = async (videoId: string, apiKey: string) => {
   const res = await fetch(
     `https://www.googleapis.com/youtube/v3/videos?part=snippet,contentDetails&id=${videoId}&key=${apiKey}`
@@ -35,7 +39,9 @@ const fetchYouTubeMetadata = async (videoId: string, apiKey: string) => {
   };
 };
 
-// Extract Video ID from various YouTube formats
+/**
+ * Extracts the YouTube video ID from various possible URL formats.
+ */
 const extractVideoId = (url: string): string | null => {
   try {
     const parsed = new URL(url);
@@ -49,80 +55,12 @@ const extractVideoId = (url: string): string | null => {
   }
 };
 
-// MAIN YOUTUBE FUNCTION
-export const processYouTubeTranscript = async (formData: FormData) => {
-  const url = formData.get("url")?.toString();
-  const apiKey = process.env.YOUTUBE_API_KEY;
-
-  if (!url) {
-    return { error: "YouTube URL is required" };
-  }
-
-  if (!apiKey) {
-    return { error: "Missing YouTube API key" };
-  }
-
-  const videoId = extractVideoId(url);
-  if (!videoId) return { error: "Invalid YouTube URL." };
-
-  // --- CACHE CHECK ---
-  // Try to fetch cached response from Supabase
-  const { data: cached, error: cacheError } = await supabase
-    .from("youtube_transcript_cache")
-    .select("response")
-    .eq("video_id", videoId)
-    .single();
-  if (cached && cached.response) {
-    // Return cached response directly
-    return cached.response;
-  }
-
-  try {
-    const { title, duration } = await fetchYouTubeMetadata(videoId, apiKey);
-
-    const transcript = await downloadAndParseVTT(videoId);
-    if (!transcript) {
-      return {
-        error:
-          "No transcript found (video may not have captions or they are inaccessible).",
-      };
-    }
-
-    const { plain, timed } = transcript;
-
-    const timedBlocks = await groupTimedTranscript(timed, 20);
-
-    const response = {
-      success: true,
-      data: {
-        url,
-        title,
-        duration,
-        transcriptPlain: plain,
-        transcriptTimed: timed,
-        transcriptBlocks: timedBlocks,
-        summary: await summarizeTranscript(plain),
-        processedAt: new Date().toISOString(),
-      },
-    };
-
-    // --- CACHE STORE ---
-    // Store the response in Supabase for future requests
-    await supabase.from("youtube_transcript_cache").insert([
-      {
-        video_id: videoId,
-        url,
-        response,
-      },
-    ]);
-
-    return response;
-  } catch (err: any) {
-    console.error("Transcript error:", err);
-    return { error: `Failed to fetch transcript: ${err.message}` };
-  }
-};
-const downloadAndParseVTT = async (
+/**
+ * Downloads the auto-generated VTT subtitles from YouTube for the given video,
+ * reads the file, parses it into plain text and timed transcript,
+ * then cleans up the temporary file.
+ */
+const downloadVttAndExtractText = async (
   videoId: string
 ): Promise<{ plain: string; timed: string } | null> => {
   const outputName = `${videoId}.en.vtt`;
@@ -159,6 +97,17 @@ const downloadAndParseVTT = async (
     });
   });
 };
+
+// --- VTT PARSING FUNCTIONS ---
+
+/**
+ * Parses a raw VTT file string into two versions:
+ * - a plain text string (deduplicated phrases)
+ * - a timed transcript (timestamp + phrase on each line)
+ *
+ * Handles ignoring header lines, extracting cue timestamps,
+ * and cleaning up tags or redundant lines.
+ */
 const parseVtt = (raw: string): { plain: string; timed: string } => {
   const lines = raw.split("\n");
 
@@ -170,7 +119,7 @@ const parseVtt = (raw: string): { plain: string; timed: string } => {
   for (const line of lines) {
     const trimmed = line.trim();
 
-    // ── ignore header clutter ──────────────────────────────────────────────
+    // Ignore non-caption lines like "WEBVTT", "Kind:", or "Language:"
     if (
       !trimmed ||
       trimmed.toLowerCase().startsWith("webvtt") ||
@@ -180,7 +129,7 @@ const parseVtt = (raw: string): { plain: string; timed: string } => {
       continue;
     }
 
-    // ── cue header?  remember its *start* timestamp ───────────────────────
+    // Check for cue header lines (timestamps), e.g. "00:00:01.000 --> 00:00:04.000"
     const cueMatch = trimmed.match(
       /^(\d{2}:\d{2}:\d{2}\.\d{3})\s+-->\s+\d{2}:\d{2}:\d{2}\.\d{3}/
     );
@@ -189,7 +138,7 @@ const parseVtt = (raw: string): { plain: string; timed: string } => {
       continue;
     }
 
-    // ── actual caption text line (same logic you had) ─────────────────────
+    // Remove inline timestamps <00:00:01.000> and <c> tags from caption text
     let phrase = trimmed
       // strip word-level timestamps <00:00:01.000>
       .replace(/<\d{2}:\d{2}:\d{2}\.\d{3}>/g, "")
@@ -198,12 +147,12 @@ const parseVtt = (raw: string): { plain: string; timed: string } => {
       .replace(/\s+/g, " ")
       .trim();
 
-    if (!phrase || phrase === lastPhrase) continue; // de-dupe (unchanged)
+    if (!phrase || phrase === lastPhrase) continue; // Skip duplicate lines (avoid repeating same phrase if unchanged)
 
-    // plain version
+    // Build plain transcript by joining cleaned lines
     plainParts.push(phrase);
 
-    // timed version (only if we already saw a header)
+    // Build timed transcript lines that include the start timestamp
     if (currentTimestamp) {
       timedParts.push(`${currentTimestamp}  ${phrase}`);
     }
@@ -217,6 +166,11 @@ const parseVtt = (raw: string): { plain: string; timed: string } => {
   };
 };
 
+// --- OPENAI SUMMARY FUNCTION ---
+/**
+ * Summarizes the plain transcript using the OpenAI chat model,
+ * producing a concise multi-sentence summary.
+ */
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
 
 const summarizeTranscript = async (text: string): Promise<string> => {
@@ -247,6 +201,7 @@ const summarizeTranscript = async (text: string): Promise<string> => {
   }
 };
 
+// --- TRANSCRIPT BLOCK GROUPING ---
 /**
  * Turns
  *   00:00:01.719  night building little projects on
@@ -258,6 +213,7 @@ const summarizeTranscript = async (text: string): Promise<string> => {
  * @param timed       transcriptTimed (one line per cue, space-separated)
  * @param windowSize  size of each bucket in seconds (default 20)
  */
+
 export type TimedBlock = { start: string; end: string; text: string };
 export async function groupTimedTranscript(
   timed: string,
@@ -303,3 +259,85 @@ export async function groupTimedTranscript(
       };
     });
 }
+
+// --- MAIN ENTRYPOINT FUNCTION ---
+/**
+ * Processes a YouTube URL submitted via form data:
+ * - extracts video ID,
+ * - checks for cached transcript in Supabase,
+ * - downloads metadata and captions if needed,
+ * - parses and summarizes,
+ * - stores the processed result back to Supabase.
+ */
+export const processYouTubeTranscript = async (formData: FormData) => {
+  const url = formData.get("url")?.toString();
+  const apiKey = process.env.YOUTUBE_API_KEY;
+
+  if (!url) {
+    return { error: "YouTube URL is required" };
+  }
+
+  if (!apiKey) {
+    return { error: "Missing YouTube API key" };
+  }
+
+  const videoId = extractVideoId(url);
+  if (!videoId) return { error: "Invalid YouTube URL." };
+
+  // --- CACHE LOGIC ---
+  // Try to retrieve an existing processed response from Supabase for this video ID
+  const { data: cached, error: cacheError } = await supabase
+    .from("youtube_transcript_cache")
+    .select("response")
+    .eq("video_id", videoId)
+    .single();
+  if (cached && cached.response) {
+    // If found, return cached response immediately
+    return cached.response;
+  }
+
+  try {
+    const { title, duration } = await fetchYouTubeMetadata(videoId, apiKey);
+
+    const transcript = await downloadVttAndExtractText(videoId);
+    if (!transcript) {
+      return {
+        error:
+          "No transcript found (video may not have captions or they are inaccessible).",
+      };
+    }
+
+    const { plain, timed } = transcript;
+
+    const timedBlocks = await groupTimedTranscript(timed, 20);
+
+    const response = {
+      success: true,
+      data: {
+        url,
+        title,
+        duration,
+        transcriptPlain: plain,
+        transcriptTimed: timed,
+        transcriptBlocks: timedBlocks,
+        summary: await summarizeTranscript(plain),
+        processedAt: new Date().toISOString(),
+      },
+    };
+
+    // --- CACHE STORE ---
+    // Store the response in Supabase for future requests (if not already cached)
+    await supabase.from("youtube_transcript_cache").insert([
+      {
+        video_id: videoId,
+        url,
+        response,
+      },
+    ]);
+
+    return response;
+  } catch (err: any) {
+    console.error("Transcript error:", err);
+    return { error: `Failed to fetch transcript: ${err.message}` };
+  }
+};
