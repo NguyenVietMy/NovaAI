@@ -12,6 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import DashboardNavbar from "@/components/dashboard-navbar";
+import { generateYouTubeScript } from "../actions/youtube/youtubeIdeasBrainstormer";
 
 const SHORTS_DURATIONS = ["< 15 sec", "< 30 sec", "< 45 sec", "< 1 minute"];
 const VIDEO_DURATIONS = [
@@ -24,9 +25,14 @@ const VIDEO_DURATIONS = [
 export default function IdeasBrainstormer() {
   const [contentType, setContentType] = useState("Shorts");
   const [duration, setDuration] = useState("");
+  const [topicType, setTopicType] = useState<"topic" | "title">("topic");
   const [topic, setTopic] = useState("");
   const [inspirationLinks, setInspirationLinks] = useState([""]);
   const [additionalIdeas, setAdditionalIdeas] = useState("");
+  const [result, setResult] = useState<string | string[] | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [selectedTitle, setSelectedTitle] = useState<string | null>(null);
 
   const handleAddLink = () => {
     if (inspirationLinks.length < 20) {
@@ -44,6 +50,52 @@ export default function IdeasBrainstormer() {
   const handleContentTypeChange = (val: string) => {
     setContentType(val);
     setDuration("");
+  };
+
+  // Handler for Generate Script button
+  const handleGenerate = async () => {
+    setLoading(true);
+    setError("");
+    setResult(null);
+    setSelectedTitle(null);
+    try {
+      const res = await generateYouTubeScript({
+        topicType,
+        topic,
+        duration,
+        contentType,
+        inspirationLinks,
+        additionalIdeas,
+      });
+      setResult(res);
+    } catch (err) {
+      setError("Failed to generate. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Handler for when user selects a suggested title
+  const handleTitleSelect = async (title: string) => {
+    setSelectedTitle(title);
+    setLoading(true);
+    setError("");
+    setResult(null);
+    try {
+      const script = await generateYouTubeScript({
+        topicType: "title",
+        topic: title,
+        duration,
+        contentType,
+        inspirationLinks,
+        additionalIdeas,
+      });
+      setResult(script);
+    } catch (err) {
+      setError("Failed to generate script for this title.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -97,12 +149,34 @@ export default function IdeasBrainstormer() {
                   ))}
                 </select>
               </div>
-              {/* Topic */}
+              {/* Topic Type Dropdown */}
               <div>
-                <label className="block text-sm font-medium mb-1">Topic</label>
+                <label className="block text-sm font-medium mb-1">
+                  What do you want to start with?
+                </label>
+                <select
+                  className="w-full border rounded-md px-3 py-2 bg-background"
+                  value={topicType}
+                  onChange={(e) =>
+                    setTopicType(e.target.value as "topic" | "title")
+                  }
+                >
+                  <option value="topic">General Topic</option>
+                  <option value="title">Exact Video Title</option>
+                </select>
+              </div>
+              {/* Topic or Title Input */}
+              <div>
+                <label className="block text-sm font-medium mb-1">
+                  {topicType === "topic" ? "Topic" : "Exact Video Title"}
+                </label>
                 <Input
                   type="text"
-                  placeholder="e.g. How to grow on YouTube"
+                  placeholder={
+                    topicType === "topic"
+                      ? "e.g. Coding / Cooking / Growing on Youtube / ..."
+                      : "e.g. 10 Tips to Grow Your Channel Fast"
+                  }
                   value={topic}
                   onChange={(e) => setTopic(e.target.value)}
                   required
@@ -112,6 +186,10 @@ export default function IdeasBrainstormer() {
               <div>
                 <label className="block text-sm font-medium mb-1">
                   Inspiration Links (YouTube URLs)
+                  <span className="text-gray-400">
+                    {" "}
+                    (optional, but helps generate even better scripts ✨)
+                  </span>
                 </label>
                 <div className="space-y-2">
                   {inspirationLinks.map((link, idx) => (
@@ -166,13 +244,71 @@ export default function IdeasBrainstormer() {
                 />
               </div>
               <Separator />
-              <Button type="button" className="w-full" disabled>
-                Generate Script (Coming Soon)
+              <Button
+                type="button"
+                className="w-full"
+                onClick={handleGenerate}
+                disabled={loading || !topic || !duration}
+              >
+                {loading ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <svg
+                      className="animate-spin h-5 w-5 text-white"
+                      viewBox="0 0 24 24"
+                    >
+                      <circle
+                        className="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                        fill="none"
+                      />
+                      <path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8v8z"
+                      />
+                    </svg>
+                    Generating...
+                  </span>
+                ) : (
+                  "Generate Script"
+                )}
               </Button>
             </form>
-            {/* Placeholder for future script results */}
-            <div className="mt-8 text-center text-muted-foreground">
-              <p>Script results will appear here after generation.</p>
+            {/* Results Section */}
+            <div className="mt-8">
+              {error && (
+                <div className="text-red-500 text-center mb-4">{error}</div>
+              )}
+              {/* Show 5 suggested titles as cards if result is an array */}
+              {Array.isArray(result) && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {result.map((title, idx) => (
+                    <button
+                      key={idx}
+                      className={`rounded-lg shadow-md p-4 text-left border hover:border-primary transition-colors ${selectedTitle === title ? "border-primary bg-primary/10" : "bg-white"}`}
+                      onClick={() => handleTitleSelect(title)}
+                      disabled={loading}
+                    >
+                      <span className="font-semibold">{title}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+              {/* Show script in a styled card if result is a string */}
+              {typeof result === "string" && !loading && (
+                <Card className="mt-6 bg-muted/50">
+                  <CardHeader>
+                    <CardTitle>Generated Script</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <pre className="whitespace-pre-wrap text-sm">{result}</pre>
+                  </CardContent>
+                </Card>
+              )}
             </div>
           </CardContent>
         </Card>
