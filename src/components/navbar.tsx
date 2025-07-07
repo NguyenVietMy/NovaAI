@@ -36,6 +36,12 @@ export default async function Navbar() {
           </span>
         </Link>
         <div className="flex gap-6 items-center">
+          <Link
+            href="/tools"
+            className="text-sm font-medium text-gray-700 hover:text-gray-900"
+          >
+            Tools
+          </Link>
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>

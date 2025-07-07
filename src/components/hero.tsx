@@ -33,10 +33,10 @@ export default function Hero() {
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
               <Link
-                href="/dashboard"
+                href="/tools"
                 className="inline-flex items-center px-8 py-4 text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors text-lg font-medium shadow-lg hover:shadow-xl"
               >
-                Start Downloading Free
+                Explore All Tools
                 <Download className="ml-2 w-5 h-5" />
               </Link>
 
@@ -60,59 +60,6 @@ export default function Hero() {
               <div className="flex items-center gap-2">
                 <Check className="w-5 h-5 text-green-500" />
                 <span>Lightning fast processing</span>
-              </div>
-            </div>
-
-            {/* Demo Preview */}
-            <div className="mt-20 max-w-4xl mx-auto">
-              <div className="bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden">
-                <div className="bg-gray-50 px-6 py-4 border-b border-gray-200">
-                  <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 bg-red-500 rounded-full"></div>
-                    <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
-                    <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                    <div className="ml-4 text-sm text-gray-600">
-                      YouTube Transcript Downloader
-                    </div>
-                  </div>
-                </div>
-                <div className="p-8">
-                  <div className="space-y-4">
-                    <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-lg">
-                      <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
-                      <span className="text-gray-600 text-sm">
-                        https://youtube.com/watch?v=example1
-                      </span>
-                      <div className="ml-auto text-green-600 text-sm font-medium">
-                        ✓ Ready
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-lg">
-                      <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
-                      <span className="text-gray-600 text-sm">
-                        https://youtube.com/watch?v=example2
-                      </span>
-                      <div className="ml-auto text-blue-600 text-sm font-medium">
-                        Processing...
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-lg">
-                      <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
-                      <span className="text-gray-600 text-sm">
-                        https://youtube.com/watch?v=example3
-                      </span>
-                      <div className="ml-auto text-gray-400 text-sm">
-                        Queued
-                      </div>
-                    </div>
-                  </div>
-                  <div className="mt-6 flex justify-center">
-                    <button className="px-6 py-3 bg-red-600 text-white rounded-lg font-medium flex items-center gap-2">
-                      <Download className="w-4 h-4" />
-                      Download All (TXT)
-                    </button>
-                  </div>
-                </div>
               </div>
             </div>
           </div>
