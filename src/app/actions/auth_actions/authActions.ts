@@ -32,13 +32,39 @@ export const signUpAction = async (formData: FormData) => {
   });
 
   if (error) {
-    return encodedRedirect("error", "/sign-up", error.message);
+    let message = error.message;
+    if (
+      message.toLowerCase().includes("user already registered") ||
+      message.toLowerCase().includes("email already registered") ||
+      message.toLowerCase().includes("email already in use") ||
+      message
+        .toLowerCase()
+        .includes("duplicate key value violates unique constraint")
+    ) {
+      message =
+        "An account with that email already exists. Please sign in or use a different email.";
+    }
+    return encodedRedirect("error", "/sign-up", message);
   }
+  /*
+   * insert into public.users table
+   */
+  if (user) {
+    const { error: insertError } = await supabase.from("users").insert({
+      auth_id: user.id,
+      email,
+      full_name: fullName,
+    });
 
+    if (insertError) {
+      console.error("Failed to insert into users table:", insertError);
+      // optional: handle cleanup or alerting here
+    }
+  }
   return encodedRedirect(
     "success",
     "/sign-up",
-    "Thanks for signing up! Please check your email for a verification link."
+    "If an account exists for that address, we've sent instructions to your inbox."
   );
 };
 
@@ -68,7 +94,9 @@ export const forgotPasswordAction = async (formData: FormData) => {
     return encodedRedirect("error", "/forgot-password", "Email is required");
   }
 
-  const { error } = await supabase.auth.resetPasswordForEmail(email, {});
+  const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: "http://localhost:3000/auth/callback",
+  });
 
   if (error) {
     return encodedRedirect(
@@ -96,15 +124,15 @@ export const resetPasswordAction = async (formData: FormData) => {
   const confirmPassword = formData.get("confirmPassword") as string;
 
   if (!password || !confirmPassword) {
-    encodedRedirect(
+    return encodedRedirect(
       "error",
-      "/protected/reset-password",
+      "/dashboard/reset-password",
       "Password and confirm password are required"
     );
   }
 
   if (password !== confirmPassword) {
-    encodedRedirect(
+    return encodedRedirect(
       "error",
       "/dashboard/reset-password",
       "Passwords do not match"
@@ -116,14 +144,15 @@ export const resetPasswordAction = async (formData: FormData) => {
   });
 
   if (error) {
-    encodedRedirect(
+    console.error("Supabase password update error:", error);
+    return encodedRedirect(
       "error",
       "/dashboard/reset-password",
-      "Password update failed"
+      "Password update failed: " + error.message
     );
   }
 
-  encodedRedirect("success", "/protected/reset-password", "Password updated");
+  return encodedRedirect("success", "/", "Password updated");
 };
 
 export const signOutAction = async () => {
