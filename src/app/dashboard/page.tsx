@@ -49,6 +49,7 @@ interface TranscriptData {
   transcriptBlocks: TimedBlock[];
   summary: string;
   processedAt: string;
+  thumbnailUrl?: string;
 }
 
 interface SubscriptionData {
@@ -269,9 +270,9 @@ export default function Dashboard() {
         </Card>
 
         {/* Main Content Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-stretch">
           {/* YouTube URL Input Form */}
-          <Card>
+          <Card className="flex flex-col h-full">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <FileText className="h-5 w-5" />
@@ -281,7 +282,7 @@ export default function Dashboard() {
                 Enter a YouTube URL to generate transcript and AI summary
               </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="flex-1 flex flex-col justify-between">
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="space-y-2">
                   <Input
@@ -332,7 +333,7 @@ export default function Dashboard() {
 
           {/* AI Summary Panel */}
           {transcriptData && (
-            <Card>
+            <Card className="flex flex-col h-full">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <CheckCircle className="h-5 w-5 text-green-500" />
@@ -342,9 +343,18 @@ export default function Dashboard() {
                   Generated summary of the video content
                 </CardDescription>
               </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
+              <CardContent className="flex-1 flex flex-col">
+                <div className="space-y-4 flex-1 flex flex-col">
                   <div className="bg-muted/50 rounded-lg p-4">
+                    {/* Thumbnail image above the title and duration */}
+                    {transcriptData.thumbnailUrl && (
+                      <img
+                        src={transcriptData.thumbnailUrl}
+                        alt="YouTube thumbnail"
+                        className="mb-4 w-full max-w-xs rounded shadow-sm object-cover"
+                        style={{ aspectRatio: "16/9", background: "#eee" }}
+                      />
+                    )}
                     <h4 className="font-semibold mb-2">
                       {transcriptData.title}
                     </h4>

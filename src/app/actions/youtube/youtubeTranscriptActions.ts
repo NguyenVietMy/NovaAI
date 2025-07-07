@@ -9,7 +9,7 @@ import { supabase } from "../../../../supabase/supabase";
 // --- YOUTUBE HELPER FUNCTIONS ---
 
 /**
- * Fetches metadata (title and duration) from YouTube for a given video ID.
+ * Fetches metadata (title, thumbnail, and duration) from YouTube for a given video ID.
  */
 const fetchYouTubeMetadata = async (videoId: string, apiKey: string) => {
   const res = await fetch(
@@ -23,6 +23,7 @@ const fetchYouTubeMetadata = async (videoId: string, apiKey: string) => {
   const video = data.items[0];
   const title = video.snippet.title;
   const durationISO = video.contentDetails.duration;
+  const thumbnails = video.snippet.thumbnails;
 
   const parseDuration = (iso: string): string => {
     const match = iso.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
@@ -36,6 +37,13 @@ const fetchYouTubeMetadata = async (videoId: string, apiKey: string) => {
   return {
     title,
     duration: parseDuration(durationISO),
+    thumbnailUrl:
+      thumbnails.maxres?.url ||
+      thumbnails.standard?.url ||
+      thumbnails.high?.url ||
+      thumbnails.medium?.url ||
+      thumbnails.default?.url ||
+      "",
   };
 };
 
@@ -297,7 +305,10 @@ export const processYouTubeTranscript = async (formData: FormData) => {
   }
 
   try {
-    const { title, duration } = await fetchYouTubeMetadata(videoId, apiKey);
+    const { title, duration, thumbnailUrl } = await fetchYouTubeMetadata(
+      videoId,
+      apiKey
+    );
 
     const transcript = await downloadVttAndExtractText(videoId);
     if (!transcript) {
@@ -317,6 +328,7 @@ export const processYouTubeTranscript = async (formData: FormData) => {
         url,
         title,
         duration,
+        thumbnailUrl,
         transcriptPlain: plain,
         transcriptTimed: timed,
         transcriptBlocks: timedBlocks,
