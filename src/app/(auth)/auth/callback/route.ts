@@ -2,32 +2,30 @@ import { createClient } from "../../../../../supabase/server";
 import { NextResponse } from "next/server";
 
 export async function GET(request: Request) {
-  const requestUrl = new URL(request.url);
-  console.log("CALLBACK URL:", requestUrl.toString());
-  const code = requestUrl.searchParams.get("code");
-  const redirect_to = requestUrl.searchParams.get("redirect_to");
-  const type = requestUrl.searchParams.get("type");
+  const url = new URL(request.url);
+  const code = url.searchParams.get("code");
+  const flow = url.searchParams.get("flow"); // 👈 comes from redirectTo
+  const next = url.searchParams.get("redirect_to") || "/dashboard";
 
+  /* ── Exchange PKCE code for a session ─────────────────────── */
   if (code) {
     const supabase = await createClient();
     await supabase.auth.exchangeCodeForSession(code);
+  }
 
-    // If this is a password reset (no type param, but code is present), redirect to reset-password
-    if (!type) {
+  /* ── Route by flow tag ─────────────────────────────────────── */
+  switch (flow) {
+    case "recovery":
       return NextResponse.redirect(
-        new URL("/dashboard/reset-password", requestUrl.origin)
+        new URL("/dashboard/reset-password", url.origin)
       );
-    }
-  }
 
-  // If this is a password recovery, redirect to the reset-password page
-  if (type === "recovery") {
-    return NextResponse.redirect(
-      new URL("/dashboard/reset-password", requestUrl.origin)
-    );
-  }
+    case "signup":
+      // Send newly-confirmed users wherever you like (dashboard, onboarding, etc.)
+      return NextResponse.redirect(new URL("/", url.origin));
 
-  // Otherwise, redirect to dashboard or provided redirect_to
-  const redirectTo = redirect_to || "/dashboard";
-  return NextResponse.redirect(new URL(redirectTo, requestUrl.origin));
+    // add more cases (e.g. "magic") if you tag other flows
+    default:
+      return NextResponse.redirect(new URL(next, url.origin));
+  }
 }

@@ -24,6 +24,7 @@ export const signUpAction = async (formData: FormData) => {
     email,
     password,
     options: {
+      emailRedirectTo: "http://localhost:3000/auth/callback?flow=signup",
       data: {
         full_name: fullName,
         email: email,
@@ -82,7 +83,7 @@ export const signInAction = async (formData: FormData) => {
     return encodedRedirect("error", "/sign-in", error.message);
   }
 
-  return redirect("/dashboard");
+  return redirect("/");
 };
 
 export const forgotPasswordAction = async (formData: FormData) => {
@@ -95,7 +96,7 @@ export const forgotPasswordAction = async (formData: FormData) => {
   }
 
   const { error } = await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: "http://localhost:3000/auth/callback",
+    redirectTo: "http://localhost:3000/auth/callback?flow=recovery",
   });
 
   if (error) {
