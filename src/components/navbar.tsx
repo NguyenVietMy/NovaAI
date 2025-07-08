@@ -82,6 +82,19 @@ export default async function Navbar() {
                 Get YouTube transcript from video URL
               </TooltipContent>
             </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Link
+                  href="/history"
+                  className="text-sm font-medium text-gray-700 hover:text-gray-900"
+                >
+                  History
+                </Link>
+              </TooltipTrigger>
+              <TooltipContent side="bottom">
+                View your action history.
+              </TooltipContent>
+            </Tooltip>
           </TooltipProvider>
           {user ? (
             <UserProfile />

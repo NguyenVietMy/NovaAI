@@ -5,6 +5,7 @@ import path from "path";
 import { tmpdir } from "os";
 import OpenAI from "openai";
 import { supabase } from "../../../../supabase/supabase";
+import { createClient as createServerClient } from "../../../../supabase/server";
 
 // --- YOUTUBE HELPER FUNCTIONS ---
 
@@ -296,12 +297,12 @@ export const processYouTubeTranscript = async (formData: FormData) => {
   // Try to retrieve an existing processed response from Supabase for this video ID
   const { data: cached, error: cacheError } = await supabase
     .from("youtube_transcript_cache")
-    .select("response")
+    .select("output")
     .eq("video_id", videoId)
     .single();
-  if (cached && cached.response) {
+  if (cached && cached.output) {
     // If found, return cached response immediately
-    return cached.response;
+    return cached.output;
   }
 
   try {
@@ -322,7 +323,7 @@ export const processYouTubeTranscript = async (formData: FormData) => {
 
     const timedBlocks = await groupTimedTranscript(timed, 20);
 
-    const response = {
+    const output = {
       success: true,
       data: {
         url,
@@ -339,15 +340,22 @@ export const processYouTubeTranscript = async (formData: FormData) => {
 
     // --- CACHE STORE ---
     // Store the response in Supabase for future requests (if not already cached)
+    // Now includes user_id for per-user history
+    const serverSupabase = await createServerClient();
+    const {
+      data: { user },
+    } = await serverSupabase.auth.getUser();
+    const user_id = user?.id;
     await supabase.from("youtube_transcript_cache").insert([
       {
         video_id: videoId,
         url,
-        response,
+        output,
+        user_id, // Store the user_id for history
       },
     ]);
 
-    return response;
+    return output;
   } catch (err: any) {
     console.error("Transcript error:", err);
     return { error: `Failed to fetch transcript: ${err.message}` };

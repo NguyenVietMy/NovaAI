@@ -75,6 +75,7 @@ export default function Dashboard() {
   const [success, setSuccess] = useState("");
   const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [copyStatus, setCopyStatus] = useState<string>("");
+  const [activeTab, setActiveTab] = useState("plain");
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -390,80 +391,124 @@ export default function Dashboard() {
                   <FileText className="h-5 w-5" />
                   Transcript & Downloads
                 </span>
-                <div className="flex gap-2">
-                  {/* TXT Dropdown */}
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="outline" size="sm">
-                        <Download className="mr-2 h-4 w-4" />
-                        .TXT
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="start">
-                      <DropdownMenuItem
-                        onClick={() =>
-                          downloadTranscript("txt", "withTimestamp")
-                        }
-                      >
-                        With Timestamps
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onClick={() => downloadTranscript("txt", "plain")}
-                      >
-                        Without Timestamps
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                  {/* SRT and JSON Buttons */}
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => downloadTranscript("srt")}
-                  >
-                    <Download className="mr-2 h-4 w-4" />
-                    .SRT
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => downloadTranscript("json")}
-                  >
-                    <Download className="mr-2 h-4 w-4" />
-                    .JSON
-                  </Button>
-                </div>
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <Tabs defaultValue="plain" className="w-full">
+              <Tabs
+                defaultValue="plain"
+                className="w-full"
+                value={activeTab}
+                onValueChange={setActiveTab}
+              >
                 <TabsList className="grid w-full grid-cols-2">
                   <TabsTrigger value="plain">Full Transcript</TabsTrigger>
                   <TabsTrigger value="summary">AI Summary</TabsTrigger>
                 </TabsList>
-                {/* Copy Button Dropdown */}
+                {/* Copy/Download Buttons */}
                 <div className="mt-2 mb-4 flex items-center">
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
+                  {activeTab === "plain" ? (
+                    <>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="outline" size="sm">
+                            <Download className="mr-2 h-4 w-4" />
+                            .TXT
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="start">
+                          <DropdownMenuItem
+                            onClick={() =>
+                              downloadTranscript("txt", "withTimestamp")
+                            }
+                          >
+                            With Timestamps
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => downloadTranscript("txt", "plain")}
+                          >
+                            Without Timestamps
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                       <Button
                         variant="outline"
                         size="sm"
-                        className="flex gap-2"
+                        onClick={() => downloadTranscript("srt")}
+                      >
+                        <Download className="mr-2 h-4 w-4" />
+                        .SRT
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => downloadTranscript("json")}
+                      >
+                        <Download className="mr-2 h-4 w-4" />
+                        .JSON
+                      </Button>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="flex gap-2"
+                          >
+                            <Copy className="h-4 w-4" />
+                            Copy
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="start">
+                          <DropdownMenuItem
+                            onClick={() => handleCopy("withTimestamp")}
+                          >
+                            Copy with timestamp
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleCopy("plain")}>
+                            Copy without timestamp
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </>
+                  ) : (
+                    <>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          // Download summary as txt
+                          const content = transcriptData.summary;
+                          const filename = `summary-${Date.now()}.txt`;
+                          const blob = new Blob([content], {
+                            type: "text/plain",
+                          });
+                          const url = URL.createObjectURL(blob);
+                          const a = document.createElement("a");
+                          a.href = url;
+                          a.download = filename;
+                          document.body.appendChild(a);
+                          a.click();
+                          document.body.removeChild(a);
+                          URL.revokeObjectURL(url);
+                        }}
+                      >
+                        <Download className="mr-2 h-4 w-4" />
+                        .TXT
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="flex gap-2 ml-2"
+                        onClick={async () => {
+                          await navigator.clipboard.writeText(
+                            transcriptData.summary
+                          );
+                        }}
                       >
                         <Copy className="h-4 w-4" />
                         Copy
                       </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="start">
-                      <DropdownMenuItem
-                        onClick={() => handleCopy("withTimestamp")}
-                      >
-                        Copy with timestamp
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => handleCopy("plain")}>
-                        Copy without timestamp
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                    </>
+                  )}
                   {copyStatus && (
                     <span className="ml-3 text-xs text-muted-foreground animate-fade-in">
                       {copyStatus}

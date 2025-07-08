@@ -92,4 +92,12 @@ OPENAI_API_KEY
 - Stripe data is recorded in the `subscriptions` table and incoming events handled via the `webhook_events` table.
 - Still finalizing exact product / billing setup.
 
+## 🔗 Relationships
+
+- `subscriptions.user_id` references `users.id`
+- `subscriptions.user_id` (foreign key to `users.id`)
+- `youtube_transcript_cache` indexed on `created_at`
+- `stripe_id` is the Stripe subscription ID.
+- `customer_id` is the Stripe customer ID.
+
 ---
