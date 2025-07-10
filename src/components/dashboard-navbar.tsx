@@ -50,6 +50,12 @@ export default function DashboardNavbar() {
           >
             Tools
           </Link>
+          <Link
+            href="/projects"
+            className="text-sm font-medium text-gray-700 hover:text-gray-900"
+          >
+            Projects
+          </Link>
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
