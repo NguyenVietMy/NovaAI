@@ -5,6 +5,13 @@ import { listProjects, Project } from "../../actions/projects/projectActions";
 import { notFound } from "next/navigation";
 import { createClient } from "../../../../supabase/server";
 import DashboardNavbar from "@/components/dashboard-navbar";
+import FolderCard from "@/components/FolderCard";
+import FolderListClient from "@/components/FolderListClient";
+import {
+  renameFolder,
+  updateFolderColor,
+  deleteFolder,
+} from "../../actions/projects/folderActions";
 const NewFolderForm = dynamic(() => import("./NewFolderForm"), { ssr: false });
 const NewItemForm = dynamic(() => import("./NewItemForm"), { ssr: false });
 
@@ -61,14 +68,6 @@ export default async function ProjectDashboard({
           </a>
         </div>
         <h1 className="text-2xl font-bold mb-6">{project.name}</h1>
-        <div className="space-y-6 mb-10">
-          <div className="bg-gray-50 rounded-lg p-6 shadow-sm">
-            <NewFolderForm projectId={projectId} />
-          </div>
-          <div className="bg-gray-50 rounded-lg p-6 shadow-sm">
-            <NewItemForm projectId={projectId} />
-          </div>
-        </div>
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-lg font-semibold">Folders</h2>
           <div className="ml-auto">
@@ -80,21 +79,7 @@ export default async function ProjectDashboard({
             </select>
           </div>
         </div>
-        <div className="flex flex-wrap gap-4 mb-10">
-          {folders.length === 0 && (
-            <div className="text-gray-500">No folders yet.</div>
-          )}
-          {folders.map((folder) => (
-            <a
-              key={folder.id}
-              href={`/projects/${projectId}/folders/${folder.id}`}
-              className="rounded-lg p-4 min-w-[160px] cursor-pointer transition-shadow hover:shadow-lg bg-white border border-gray-200 hover:border-blue-400"
-              style={{ backgroundColor: folder.color }}
-            >
-              <div className="font-semibold">{folder.name}</div>
-            </a>
-          ))}
-        </div>
+        <FolderListClient folders={folders} projectId={projectId} />
         <div className="mb-2">
           <h2 className="text-lg font-semibold">Uncategorized Items</h2>
         </div>
