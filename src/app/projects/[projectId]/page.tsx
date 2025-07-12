@@ -1,7 +1,7 @@
 import dynamic from "next/dynamic";
-import { listFolders, Folder } from "../../actions/projects/folderActions";
-import { listItems, Item } from "../../actions/projects/itemActions";
-import { listProjects, Project } from "../../actions/projects/projectActions";
+import { listFolders } from "../../actions/projects/folderActions";
+import { listItems } from "../../actions/projects/itemActions";
+import { listProjects } from "../../actions/projects/projectActions";
 import { notFound } from "next/navigation";
 import { createClient } from "../../../../supabase/server";
 import DashboardNavbar from "@/components/dashboard-navbar";
@@ -13,6 +13,7 @@ import {
   deleteFolder,
 } from "../../actions/projects/folderActions";
 import { NewItemModalButton } from "./NewItemModalButton";
+import type { Project, Folder, Item } from "@/types/supabase";
 const NewFolderForm = dynamic(() => import("./NewFolderForm"), { ssr: false });
 
 interface ProjectDashboardProps {

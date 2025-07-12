@@ -2,7 +2,6 @@ import dynamic from "next/dynamic";
 import {
   listProjects,
   createProject,
-  Project,
 } from "../actions/projects/projectActions";
 import type { FC } from "react";
 import { createClient } from "../../../supabase/server";
@@ -17,6 +16,7 @@ import {
 import { useState } from "react";
 import { createClient as createSupabaseClient } from "@/../supabase/client";
 import ProjectListClient from "@/components/ProjectListClient";
+import type { Project } from "@/types/supabase";
 
 // Explicitly type the dynamic import to accept userId prop
 const NewProjectForm = dynamic(() => import("./NewProjectForm"), {

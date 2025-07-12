@@ -1,27 +1,29 @@
 "use client";
 import { useState } from "react";
+import type { Item, Folder, ItemType } from "@/types/supabase";
+import type { ApiResponse } from "@/types/api";
 import {
-  Item,
   updateItem,
   deleteItem,
 } from "../../../../actions/projects/itemActions";
-import { Folder } from "../../../../actions/projects/folderActions";
 import { useRouter } from "next/navigation";
 
 interface ItemEditFormProps {
   item: Item;
   folders: Folder[];
   projectId: string;
+  sourceFolder?: string;
 }
 
 export default function ItemEditForm({
   item,
   folders,
   projectId,
+  sourceFolder,
 }: ItemEditFormProps) {
   const router = useRouter();
   const [name, setName] = useState(item.name);
-  const [type, setType] = useState(item.type);
+  const [type, setType] = useState<ItemType>(item.type);
   const [data, setData] = useState(JSON.stringify(item.data, null, 2));
   const [folderId, setFolderId] = useState(item.folder_id || "");
   const [loading, setLoading] = useState(false);
@@ -39,7 +41,13 @@ export default function ItemEditForm({
         data: JSON.parse(data),
         folder_id: folderId || null,
       });
-      router.refresh();
+
+      // Redirect to the source folder if provided, otherwise to the project
+      if (sourceFolder && sourceFolder !== "uncategorized") {
+        router.push(`/projects/${projectId}/folders/${sourceFolder}`);
+      } else {
+        router.push(`/projects/${projectId}`);
+      }
     } catch (err: any) {
       setError(err.message || "Failed to update item");
     } finally {
@@ -54,7 +62,12 @@ export default function ItemEditForm({
     setError(null);
     try {
       await deleteItem(item.id, projectId);
-      router.push(`/projects/${projectId}`);
+      // Redirect to the source folder if provided, otherwise to the project
+      if (sourceFolder && sourceFolder !== "uncategorized") {
+        router.push(`/projects/${projectId}/folders/${sourceFolder}`);
+      } else {
+        router.push(`/projects/${projectId}`);
+      }
     } catch (err: any) {
       setError(err.message || "Failed to delete item");
     } finally {

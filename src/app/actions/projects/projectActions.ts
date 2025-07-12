@@ -1,29 +1,26 @@
 "use server";
 import { createClient } from "../../../../supabase/server";
-import { revalidatePath } from "next/cache";
-
-// Types
-export interface Project {
-  id: string;
-  user_id: string;
-  name: string;
-  created_at: string;
-}
+import { supabaseAction } from "@/lib/supabaseAction";
+import type { Project } from "@/types/supabase";
+import type { ApiResponse } from "@/types/api";
 
 // Create a new project for the current user
 export async function createProject(
   userId: string,
   name: string
-): Promise<{ success: boolean; project?: Project; error?: string }> {
-  const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("projects")
-    .insert([{ user_id: userId, name }])
-    .select()
-    .single();
-  if (error) return { success: false, error: error.message };
-  revalidatePath("/projects");
-  return { success: true, project: data };
+): Promise<ApiResponse<Project>> {
+  const result = await supabaseAction(async () => {
+    const supabase = await createClient();
+    return await supabase
+      .from("projects")
+      .insert([{ user_id: userId, name }])
+      .select()
+      .single();
+  }, "/projects");
+  return {
+    ...result,
+    data: result.data ?? undefined,
+  };
 }
 
 // List all projects for the current user
@@ -42,30 +39,36 @@ export async function renameProject(
   projectId: string,
   newName: string,
   userId: string
-): Promise<{ success: boolean; error?: string }> {
-  const supabase = await createClient();
-  const { error } = await supabase
-    .from("projects")
-    .update({ name: newName })
-    .eq("id", projectId)
-    .eq("user_id", userId);
-  if (error) return { success: false, error: error.message };
-  revalidatePath("/projects");
-  return { success: true };
+): Promise<ApiResponse<null>> {
+  const result = await supabaseAction(async () => {
+    const supabase = await createClient();
+    return await supabase
+      .from("projects")
+      .update({ name: newName })
+      .eq("id", projectId)
+      .eq("user_id", userId);
+  }, "/projects");
+  return {
+    ...result,
+    data: undefined,
+  };
 }
 
 // Delete a project (and cascade delete folders/items via DB constraints)
 export async function deleteProject(
   projectId: string,
   userId: string
-): Promise<{ success: boolean; error?: string }> {
-  const supabase = await createClient();
-  const { error } = await supabase
-    .from("projects")
-    .delete()
-    .eq("id", projectId)
-    .eq("user_id", userId);
-  if (error) return { success: false, error: error.message };
-  revalidatePath("/projects");
-  return { success: true };
+): Promise<ApiResponse<null>> {
+  const result = await supabaseAction(async () => {
+    const supabase = await createClient();
+    return await supabase
+      .from("projects")
+      .delete()
+      .eq("id", projectId)
+      .eq("user_id", userId);
+  }, "/projects");
+  return {
+    ...result,
+    data: undefined,
+  };
 }

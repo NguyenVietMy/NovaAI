@@ -12,12 +12,8 @@ import {
   DropdownMenuSeparator,
 } from "./ui/dropdown-menu";
 import { Dialog } from "./ui/dialog";
-
-interface Folder {
-  id: string;
-  name: string;
-  color: string;
-}
+import type { Folder } from "@/types/supabase";
+import type { ApiResponse } from "@/types/api";
 
 interface FolderListClientProps {
   folders: Folder[];
@@ -30,7 +26,7 @@ export default function FolderListClient({
 }: FolderListClientProps) {
   const router = useRouter();
   const supabase = createClient();
-  const [folders, setFolders] = useState(initialFolders);
+  const [folders, setFolders] = useState<Folder[]>(initialFolders);
   const [modalOpen, setModalOpen] = useState(false);
   const [newName, setNewName] = useState("Untitled folder");
   const [newColor, setNewColor] = useState("#e5e7eb");

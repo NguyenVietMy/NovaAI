@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
+import type { Item, ItemType } from "@/types/supabase";
+import type { ApiResponse } from "@/types/api";
 
 export function NewItemForm({
   projectId,
@@ -15,7 +17,7 @@ export function NewItemForm({
   folderId?: string;
 }) {
   const [name, setName] = useState("");
-  const [type, setType] = useState("transcript");
+  const [type, setType] = useState<ItemType>("transcript");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
@@ -55,7 +57,7 @@ export function NewItemForm({
           id="item-type"
           className="border rounded px-2 py-1"
           value={type}
-          onChange={(e) => setType(e.target.value)}
+          onChange={(e) => setType(e.target.value as ItemType)}
           disabled={loading}
         >
           <option value="transcript">Transcript</option>

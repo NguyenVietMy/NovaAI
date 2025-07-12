@@ -1,12 +1,10 @@
 import dynamic from "next/dynamic";
-import {
-  listFolders,
-  Folder,
-} from "../../../../actions/projects/folderActions";
-import { listItems, Item } from "../../../../actions/projects/itemActions";
+import { listFolders } from "../../../../actions/projects/folderActions";
+import { listItems } from "../../../../actions/projects/itemActions";
 import { notFound } from "next/navigation";
 import DashboardNavbar from "@/components/dashboard-navbar";
 import { NewItemModalButton } from "../../NewItemModalButton";
+import type { Folder, Item } from "@/types/supabase";
 
 interface FolderViewProps {
   params: { projectId: string; folderId: string };
@@ -84,7 +82,7 @@ export default async function FolderViewPage({
           {sortedItems.map((item) => (
             <a
               key={item.id}
-              href={`/projects/${projectId}/items/${item.id}`}
+              href={`/projects/${projectId}/items/${item.id}?sourceFolder=${folderId}`}
               className="bg-gray-100 rounded p-3 flex items-center justify-between hover:bg-gray-200 transition-colors"
             >
               <span className="font-mono text-sm">{item.name}</span>

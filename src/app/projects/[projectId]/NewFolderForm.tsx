@@ -11,10 +11,16 @@ export default function NewFolderForm({ projectId }: { projectId: string }) {
   const [color, setColor] = useState("#e5e7eb");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [touched, setTouched] = useState(false);
   const router = useRouter();
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
+    setTouched(true);
+    if (!name.trim()) {
+      setError("Folder name is required");
+      return;
+    }
     setLoading(true);
     setError(null);
     const res = await createFolder(projectId, name, color);
@@ -22,6 +28,7 @@ export default function NewFolderForm({ projectId }: { projectId: string }) {
     if (res.success) {
       setName("");
       setColor("#e5e7eb");
+      setTouched(false);
       router.refresh();
     } else {
       setError(res.error || "Failed to create folder");

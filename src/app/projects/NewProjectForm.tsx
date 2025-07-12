@@ -24,9 +24,9 @@ export default function NewProjectForm({
     setError(null);
     const res = await createProject(userId, name);
     setLoading(false);
-    if (res.success && res.project) {
+    if (res.success && res.data) {
       setName("");
-      if (onProjectCreated) onProjectCreated(res.project);
+      if (onProjectCreated) onProjectCreated(res.data);
     } else {
       setError(res.error || "Failed to create project");
     }
@@ -44,10 +44,10 @@ export default function NewProjectForm({
         onChange={(e) => setName(e.target.value)}
         disabled={loading}
       />
+      {error && <div className="text-red-500 text-sm mt-2">{error}</div>}
       <Button type="submit" disabled={loading} variant="default">
         {loading ? "Creating..." : "Create Project"}
       </Button>
-      {error && <div className="text-red-500 text-sm mt-2">{error}</div>}
     </form>
   );
 }

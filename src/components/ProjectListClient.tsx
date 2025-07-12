@@ -15,12 +15,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { createClient } from "@/../supabase/client";
 import { Dialog } from "@/components/ui/dialog";
-
-interface Project {
-  id: string;
-  name: string;
-  created_at: string;
-}
+import type { Project } from "@/types/supabase";
+import type { ApiResponse } from "@/types/api";
 
 interface ProjectListClientProps {
   projects: Project[];
@@ -31,7 +27,7 @@ export default function ProjectListClient({
   projects: initialProjects,
   userId,
 }: ProjectListClientProps) {
-  const [projects, setProjects] = useState(initialProjects);
+  const [projects, setProjects] = useState<Project[]>(initialProjects);
   const [renameModalOpen, setRenameModalOpen] = useState(false);
   const [renameTarget, setRenameTarget] = useState<Project | null>(null);
   const [renameValue, setRenameValue] = useState("");
