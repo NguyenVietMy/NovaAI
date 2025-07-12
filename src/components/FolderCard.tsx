@@ -14,7 +14,7 @@ interface FolderCardProps {
   name: string;
   color: string;
   onRename: () => void;
-  onChangeColor: (newColor: string) => void;
+  onChangeColor: () => void;
   onDelete: () => void;
   onClick: () => void;
 }
@@ -57,80 +57,15 @@ export default function FolderCard({
           <DropdownMenuItem onSelect={onRename}>
             <Pencil className="w-4 h-4 mr-2" /> Rename
           </DropdownMenuItem>
-          <DropdownMenuItem onSelect={() => setColorOpen(true)}>
+          <DropdownMenuItem onSelect={onChangeColor}>
             <Palette className="w-4 h-4 mr-2" /> Change Color
           </DropdownMenuItem>
           <DropdownMenuSeparator />
-          <DropdownMenuItem
-            onSelect={() => setDeleteOpen(true)}
-            className="text-red-600"
-          >
+          <DropdownMenuItem onSelect={onDelete} className="text-red-600">
             <Trash2 className="w-4 h-4 mr-2" /> Delete
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
-      {/* Change Color Popover */}
-      {colorOpen && (
-        <div
-          className="absolute z-20 top-12 right-0 bg-white border rounded shadow p-3 flex flex-col gap-2 min-w-[180px]"
-          onClick={(e) => e.stopPropagation()}
-        >
-          <input
-            type="color"
-            className="w-10 h-10 border rounded"
-            value={newColor}
-            onChange={(e) => setNewColor(e.target.value)}
-            autoFocus
-          />
-          <div className="flex gap-2 mt-1">
-            <button
-              className="px-2 py-1 bg-blue-500 text-white rounded text-sm"
-              onClick={() => {
-                onChangeColor(newColor);
-                setColorOpen(false);
-              }}
-            >
-              Save
-            </button>
-            <button
-              className="px-2 py-1 bg-gray-200 rounded text-sm"
-              onClick={() => setColorOpen(false)}
-            >
-              Cancel
-            </button>
-          </div>
-        </div>
-      )}
-      {/* Delete Confirm Dialog */}
-      {deleteOpen && (
-        <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
-          <div className="fixed inset-0 bg-black/30 z-30 flex items-center justify-center">
-            <div className="bg-white rounded-lg shadow-lg p-6 min-w-[260px]">
-              <div className="font-semibold mb-2">Delete folder?</div>
-              <div className="text-gray-600 mb-4 text-sm">
-                This action cannot be undone.
-              </div>
-              <div className="flex gap-2 justify-end">
-                <button
-                  className="px-3 py-1 bg-red-600 text-white rounded text-sm"
-                  onClick={() => {
-                    onDelete();
-                    setDeleteOpen(false);
-                  }}
-                >
-                  Delete
-                </button>
-                <button
-                  className="px-3 py-1 bg-gray-200 rounded text-sm"
-                  onClick={() => setDeleteOpen(false)}
-                >
-                  Cancel
-                </button>
-              </div>
-            </div>
-          </div>
-        </Dialog>
-      )}
     </div>
   );
 }

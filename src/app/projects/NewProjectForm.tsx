@@ -2,8 +2,17 @@
 import React, { useState, FormEvent } from "react";
 import { createProject } from "../actions/projects/projectActions";
 import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
-export default function NewProjectForm({ userId }: { userId: string }) {
+export default function NewProjectForm({
+  userId,
+  onProjectCreated,
+}: {
+  userId: string;
+  onProjectCreated?: (project: any) => void;
+}) {
   const [name, setName] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -15,38 +24,29 @@ export default function NewProjectForm({ userId }: { userId: string }) {
     setError(null);
     const res = await createProject(userId, name);
     setLoading(false);
-    if (res.success) {
+    if (res.success && res.project) {
       setName("");
-      router.refresh();
+      if (onProjectCreated) onProjectCreated(res.project);
     } else {
       setError(res.error || "Failed to create project");
     }
   }
 
   return (
-    <form
-      className="mb-4 p-4 bg-gray-50 rounded border border-gray-200"
-      onSubmit={handleSubmit}
-    >
-      <div className="font-semibold mb-2">Create New Project</div>
-      <div className="flex gap-2 items-center mb-2">
-        <input
-          type="text"
-          placeholder="Project name"
-          className="border rounded px-2 py-1 flex-1"
-          required
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          disabled={loading}
-        />
-      </div>
-      <button
-        type="submit"
-        className="px-3 py-1 bg-blue-500 text-white rounded"
+    <form className="space-y-4" onSubmit={handleSubmit}>
+      <Label htmlFor="project-name">Project Name</Label>
+      <Input
+        id="project-name"
+        type="text"
+        placeholder="Project name"
+        required
+        value={name}
+        onChange={(e) => setName(e.target.value)}
         disabled={loading}
-      >
+      />
+      <Button type="submit" disabled={loading} variant="default">
         {loading ? "Creating..." : "Create Project"}
-      </button>
+      </Button>
       {error && <div className="text-red-500 text-sm mt-2">{error}</div>}
     </form>
   );

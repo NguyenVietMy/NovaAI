@@ -12,8 +12,8 @@ import {
   updateFolderColor,
   deleteFolder,
 } from "../../actions/projects/folderActions";
+import { NewItemModalButton } from "./NewItemModalButton";
 const NewFolderForm = dynamic(() => import("./NewFolderForm"), { ssr: false });
-const NewItemForm = dynamic(() => import("./NewItemForm"), { ssr: false });
 
 interface ProjectDashboardProps {
   params: { projectId: string };
@@ -82,6 +82,7 @@ export default async function ProjectDashboard({
         <FolderListClient folders={folders} projectId={projectId} />
         <div className="mb-2">
           <h2 className="text-lg font-semibold">Uncategorized Items</h2>
+          <NewItemModalButton projectId={projectId} />
         </div>
         <div className="space-y-2">
           {sortedItems.length === 0 && (

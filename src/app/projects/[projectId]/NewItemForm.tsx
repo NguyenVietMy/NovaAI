@@ -2,8 +2,12 @@
 import React, { useState, FormEvent } from "react";
 import { createItem } from "../../actions/projects/itemActions";
 import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select } from "@/components/ui/select";
 
-export default function NewItemForm({
+export function NewItemForm({
   projectId,
   folderId,
 }: {
@@ -32,23 +36,23 @@ export default function NewItemForm({
   }
 
   return (
-    <form
-      id="new-item-form"
-      className="mb-4 p-4 bg-gray-50 rounded border border-gray-200"
-      onSubmit={handleSubmit}
-    >
-      <div className="font-semibold mb-2">Create New Item</div>
-      <div className="flex gap-2 items-center mb-2">
-        <input
-          type="text"
-          placeholder="Item name"
-          className="border rounded px-2 py-1 flex-1"
-          required
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          disabled={loading}
-        />
+    <form id="new-item-form" className="space-y-4" onSubmit={handleSubmit}>
+      <Label htmlFor="item-name">Item Name</Label>
+      <Input
+        id="item-name"
+        type="text"
+        placeholder="Item name"
+        required
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+        disabled={loading}
+      />
+      <div className="flex items-center gap-4">
+        <Label htmlFor="item-type" className="mb-0">
+          Type
+        </Label>
         <select
+          id="item-type"
           className="border rounded px-2 py-1"
           value={type}
           onChange={(e) => setType(e.target.value)}
@@ -58,14 +62,16 @@ export default function NewItemForm({
           <option value="outline">Outline</option>
           <option value="script">Script</option>
         </select>
+        <div className="flex-1" />
+        <Button
+          type="submit"
+          disabled={loading}
+          variant="default"
+          className="ml-auto bg-black text-white"
+        >
+          {loading ? "Creating..." : "Create Item"}
+        </Button>
       </div>
-      <button
-        type="submit"
-        className="px-3 py-1 bg-green-500 text-white rounded"
-        disabled={loading}
-      >
-        {loading ? "Creating..." : "Create Item"}
-      </button>
       {error && <div className="text-red-500 text-sm mt-2">{error}</div>}
     </form>
   );

@@ -6,8 +6,7 @@ import {
 import { listItems, Item } from "../../../../actions/projects/itemActions";
 import { notFound } from "next/navigation";
 import DashboardNavbar from "@/components/dashboard-navbar";
-
-const NewItemForm = dynamic(() => import("../../NewItemForm"), { ssr: false });
+import { NewItemModalButton } from "../../NewItemModalButton";
 
 interface FolderViewProps {
   params: { projectId: string; folderId: string };
@@ -66,7 +65,7 @@ export default async function FolderViewPage({
           />
           <h1 className="text-2xl font-bold">{folder.name}</h1>
         </div>
-        <NewItemForm projectId={projectId} folderId={folderId} />
+        <NewItemModalButton projectId={projectId} folderId={folderId} />
         <div className="flex gap-4 mb-8">
           <select
             className="ml-auto border rounded px-2 py-1"
