@@ -95,7 +95,7 @@ export default function ItemEditForm({
         <label className="block font-medium mb-1">Type</label>
         <input
           className="w-full border rounded px-3 py-2 bg-gray-100"
-          value={type}
+          value={type === "transcript (custom)" ? "transcript (custom)" : type}
           readOnly
         />
       </div>

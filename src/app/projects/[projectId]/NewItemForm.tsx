@@ -17,7 +17,7 @@ export function NewItemForm({
   folderId?: string;
 }) {
   const [name, setName] = useState("");
-  const [type, setType] = useState<ItemType>("transcript");
+  const [type, setType] = useState<ItemType>("transcript (custom)");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
@@ -30,7 +30,7 @@ export function NewItemForm({
     setLoading(false);
     if (res.success) {
       setName("");
-      setType("transcript");
+      setType("transcript (custom)");
       router.refresh();
     } else {
       setError(res.error || "Failed to create item");
@@ -60,7 +60,7 @@ export function NewItemForm({
           onChange={(e) => setType(e.target.value as ItemType)}
           disabled={loading}
         >
-          <option value="transcript">Transcript</option>
+          <option value="transcript (custom)">Transcript (custom)</option>
           <option value="outline">Outline</option>
           <option value="script">Script</option>
         </select>

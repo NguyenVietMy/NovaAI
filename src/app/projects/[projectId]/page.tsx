@@ -81,8 +81,8 @@ export default async function ProjectDashboard({
           </div>
         </div>
         <FolderListClient folders={folders} projectId={projectId} />
-        <div className="mb-2">
-          <h2 className="text-lg font-semibold">Uncategorized Items</h2>
+        <div className="mb-6">
+          <h2 className="text-lg font-semibold mb-4">Uncategorized Items</h2>
           <NewItemModalButton projectId={projectId} />
         </div>
         <div className="space-y-2">

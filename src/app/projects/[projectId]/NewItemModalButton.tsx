@@ -10,6 +10,7 @@ import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { FilePlus, Plus } from "lucide-react";
 import { NewItemForm } from "./NewItemForm";
+import { HistoryImportModal } from "./HistoryImportModal";
 
 export function NewItemModalButton({
   projectId,
@@ -19,6 +20,7 @@ export function NewItemModalButton({
   folderId?: string;
 }) {
   const [modalOpen, setModalOpen] = useState(false);
+  const [importModalOpen, setImportModalOpen] = useState(false);
   return (
     <div className="mb-4">
       <DropdownMenu>
@@ -31,6 +33,9 @@ export function NewItemModalButton({
           <DropdownMenuItem onSelect={() => setModalOpen(true)}>
             <FilePlus className="w-4 h-4 mr-2" /> New item
           </DropdownMenuItem>
+          <DropdownMenuItem onSelect={() => setImportModalOpen(true)}>
+            <FilePlus className="w-4 h-4 mr-2" /> Import items from history
+          </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
@@ -39,6 +44,13 @@ export function NewItemModalButton({
           <NewItemForm projectId={projectId} folderId={folderId} />
         </DialogContent>
       </Dialog>
+      {/* Import from history modal */}
+      <HistoryImportModal
+        open={importModalOpen}
+        onOpenChange={setImportModalOpen}
+        projectId={projectId}
+        folderId={folderId}
+      />
     </div>
   );
 }

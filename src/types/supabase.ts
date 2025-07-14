@@ -312,7 +312,11 @@ export interface Folder {
   created_at: string;
 }
 
-export type ItemType = "transcript" | "outline" | "script";
+export type ItemType =
+  | "transcript"
+  | "transcript (custom)"
+  | "outline"
+  | "script";
 
 export interface Item {
   id: string;

@@ -86,7 +86,11 @@ export default async function FolderViewPage({
               className="bg-gray-100 rounded p-3 flex items-center justify-between hover:bg-gray-200 transition-colors"
             >
               <span className="font-mono text-sm">{item.name}</span>
-              <span className="text-xs text-gray-500">{item.type}</span>
+              <span className="text-xs text-gray-500">
+                {item.type === "transcript (custom)"
+                  ? "transcript (custom)"
+                  : item.type}
+              </span>
             </a>
           ))}
         </div>
