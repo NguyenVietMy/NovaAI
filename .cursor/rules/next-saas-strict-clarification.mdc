@@ -74,4 +74,6 @@ alwaysApply: true
 
 
 # Always run things on commandprompt, do not run on powershell.
+
+#When writing playwright tests, be specific of what element you're trying to select / click as there might be more than one button with the same text
 ```
