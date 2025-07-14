@@ -6,7 +6,8 @@
     "start": "next start",
     "test": "jest",
     "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage"
+    "test:coverage": "jest --coverage",
+    "e2e": "playwright test"
   },
   "dependencies": {
     "@polar-sh/sdk": "^0.26.1",
@@ -48,6 +49,7 @@
     "ytdl-core": "^4.11.5"
   },
   "devDependencies": {
+    "@playwright/test": "^1.54.1",
     "@types/jest": "^29.5.14",
     "@types/node": "^20",
     "@types/react": "^18",
