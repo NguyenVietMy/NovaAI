@@ -50,3 +50,7 @@ node_modules/
 supabase/.temp/
 
 .vscode/
+
+.cursor/
+# Ignore debug screenshots
+*.png

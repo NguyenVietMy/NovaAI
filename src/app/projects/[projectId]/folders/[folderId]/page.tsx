@@ -38,15 +38,6 @@ export default async function FolderViewPage({
     <>
       <DashboardNavbar />
       <div className="max-w-3xl mx-auto py-8 px-4">
-        {/* Back to Project List button */}
-        <div className="mb-2">
-          <a
-            href="/projects"
-            className="inline-block text-blue-600 hover:underline"
-          >
-            ← Back to Project List
-          </a>
-        </div>
         {/* Back button */}
         <div className="mb-4">
           <a
