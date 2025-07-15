@@ -12,11 +12,12 @@ import {
   DropdownMenuSeparator,
 } from "./ui/dropdown-menu";
 import { Dialog } from "./ui/dialog";
-import type { Folder } from "@/types/supabase";
+import type { FolderWithOwner } from "@/types/supabase";
 import type { ApiResponse } from "@/types/api";
+import { createFolder } from "@/app/actions/projects/folderActions";
 
 interface FolderListClientProps {
-  folders: Folder[];
+  folders: FolderWithOwner[];
   projectId: string;
 }
 
@@ -26,20 +27,24 @@ export default function FolderListClient({
 }: FolderListClientProps) {
   const router = useRouter();
   const supabase = createClient();
-  const [folders, setFolders] = useState<Folder[]>(initialFolders);
+  const [folders, setFolders] = useState<FolderWithOwner[]>(initialFolders);
   const [modalOpen, setModalOpen] = useState(false);
   const [newName, setNewName] = useState("Untitled folder");
   const [newColor, setNewColor] = useState("#e5e7eb");
   const [creating, setCreating] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const [renameModalOpen, setRenameModalOpen] = useState(false);
-  const [renameTarget, setRenameTarget] = useState<Folder | null>(null);
+  const [renameTarget, setRenameTarget] = useState<FolderWithOwner | null>(
+    null
+  );
   const [renameValue, setRenameValue] = useState("");
   const [colorModalOpen, setColorModalOpen] = useState(false);
-  const [colorTarget, setColorTarget] = useState<Folder | null>(null);
+  const [colorTarget, setColorTarget] = useState<FolderWithOwner | null>(null);
   const [colorValue, setColorValue] = useState("#e5e7eb");
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
-  const [deleteTarget, setDeleteTarget] = useState<Folder | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<FolderWithOwner | null>(
+    null
+  );
 
   useEffect(() => {
     if (modalOpen && inputRef.current) {
@@ -50,14 +55,10 @@ export default function FolderListClient({
 
   async function handleCreateFolder() {
     setCreating(true);
-    const { data, error } = await supabase
-      .from("folders")
-      .insert([{ name: newName, color: newColor, project_id: projectId }])
-      .select()
-      .single();
+    const res = await createFolder(projectId, newName, newColor);
     setCreating(false);
-    if (!error && data) {
-      setFolders([data, ...folders]);
+    if (res.success && res.data) {
+      setFolders([res.data, ...folders]);
       setModalOpen(false);
       setNewName("Untitled folder");
       setNewColor("#e5e7eb");
@@ -164,11 +165,14 @@ export default function FolderListClient({
         {folders.length === 0 && (
           <div className="text-gray-500">No folders yet.</div>
         )}
-        {folders.map((folder) => (
+        {folders.map((folder: FolderWithOwner) => (
           <FolderCard
             key={folder.id}
+            id={folder.id}
             name={folder.name}
             color={folder.color}
+            ownerName={folder.users?.name}
+            ownerEmail={folder.users?.email || folder.owner_id || "unknown"}
             onRename={() => {
               setRenameTarget(folder);
               setRenameValue(folder.name);

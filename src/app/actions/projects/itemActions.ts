@@ -14,6 +14,9 @@ export async function createItem(
 ): Promise<ApiResponse<Item>> {
   const result = await supabaseAction(async () => {
     const supabase = await createClient();
+    const { data: userData } = await supabase.auth.getUser();
+    const owner_id = userData?.user?.id;
+    if (!owner_id) throw new Error("User not authenticated");
     return await supabase
       .from("items")
       .insert([
@@ -23,6 +26,7 @@ export async function createItem(
           type,
           name,
           data,
+          owner_id,
         },
       ])
       .select()
@@ -114,4 +118,66 @@ export async function moveItem(
     ...result,
     data: undefined,
   };
+}
+
+// --- Item Sharing Actions ---
+
+// Share an item with a user by email
+export async function shareItem(
+  itemId: string,
+  userEmail: string,
+  permission: string = "view"
+) {
+  const supabase = await createClient();
+  // Look up user by email
+  const { data: user, error: userError } = await supabase
+    .from("users")
+    .select("id")
+    .eq("email", userEmail)
+    .single();
+  if (userError || !user) {
+    return { success: false, error: "User not found" };
+  }
+  // Insert into item_shares
+  const { error } = await supabase
+    .from("item_shares")
+    .insert([{ item_id: itemId, user_id: user.id, permission }]);
+  if (error) {
+    return { success: false, error: error.message };
+  }
+  return { success: true };
+}
+
+// Unshare an item with a user
+export async function unshareItem(itemId: string, userId: string) {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("item_shares")
+    .delete()
+    .eq("item_id", itemId)
+    .eq("user_id", userId);
+  if (error) {
+    return { success: false, error: error.message };
+  }
+  return { success: true };
+}
+
+// List all users an item is shared with
+export async function listItemShares(itemId: string) {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("item_shares")
+    .select("user_id, permission, users(name, email)")
+    .eq("item_id", itemId);
+  if (error) {
+    return { success: false, error: error.message, users: [] };
+  }
+  // Map to a friendlier format
+  const users = (data || []).map((row: any) => ({
+    user_id: row.user_id,
+    permission: row.permission,
+    name: row.users?.name,
+    email: row.users?.email,
+  }));
+  return { success: true, users };
 }

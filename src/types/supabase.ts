@@ -310,6 +310,14 @@ export interface Folder {
   name: string;
   color: string;
   created_at: string;
+  owner_id: string;
+}
+
+export interface FolderWithOwner extends Folder {
+  users?: {
+    name?: string | null;
+    email?: string | null;
+  };
 }
 
 export type ItemType =
