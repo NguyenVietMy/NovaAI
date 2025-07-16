@@ -11,9 +11,6 @@ import {
 import { MoreVertical, FolderPlus, FilePlus, Plus } from "lucide-react";
 import { HistoryImportModal } from "./[projectId]/HistoryImportModal";
 
-const NewProjectForm = dynamic(() => import("./NewProjectForm"), {
-  ssr: false,
-});
 const NewFolderForm = dynamic(
   () => import("./[projectId]/NewFolderForm").then((mod) => mod.default),
   {
@@ -26,13 +23,21 @@ const NewItemForm = dynamic(
     ssr: false,
   }
 );
+const NewProjectForm = dynamic(
+  () => import("./NewProjectForm").then((mod) => mod.default),
+  {
+    ssr: false,
+  }
+);
 
 export default function ProjectsNewMenu({
   userId,
   projectId,
+  showNewProjectOption = false,
 }: {
   userId: string;
   projectId?: string;
+  showNewProjectOption?: boolean;
 }) {
   const [modal, setModal] = useState<
     null | "project" | "folder" | "item" | "import"
@@ -46,9 +51,11 @@ export default function ProjectsNewMenu({
           </button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start">
-          <DropdownMenuItem onSelect={() => setModal("project")}>
-            <MoreVertical className="w-4 h-4 mr-2" /> New project
-          </DropdownMenuItem>
+          {showNewProjectOption && (
+            <DropdownMenuItem onSelect={() => setModal("project")}>
+              <MoreVertical className="w-4 h-4 mr-2" /> New project
+            </DropdownMenuItem>
+          )}
           <DropdownMenuItem onSelect={() => setModal("folder")}>
             <FolderPlus className="w-4 h-4 mr-2" /> New folder
           </DropdownMenuItem>
@@ -61,21 +68,23 @@ export default function ProjectsNewMenu({
         </DropdownMenuContent>
       </DropdownMenu>
       {/* Project Modal */}
-      <Dialog
-        open={modal === "project"}
-        onOpenChange={(open) => setModal(open ? "project" : null)}
-      >
-        <DialogContent>
-          <div className="text-lg font-semibold mb-4">New Project</div>
-          <NewProjectForm
-            userId={userId}
-            onProjectCreated={() => {
-              setModal(null);
-              window.location.reload();
-            }}
-          />
-        </DialogContent>
-      </Dialog>
+      {showNewProjectOption && (
+        <Dialog
+          open={modal === "project"}
+          onOpenChange={(open) => setModal(open ? "project" : null)}
+        >
+          <DialogContent>
+            <div className="text-lg font-semibold mb-4">New Project</div>
+            <NewProjectForm
+              userId={userId}
+              onProjectCreated={() => {
+                setModal(null);
+                window.location.reload();
+              }}
+            />
+          </DialogContent>
+        </Dialog>
+      )}
       {/* Folder Modal */}
       <Dialog
         open={modal === "folder"}
