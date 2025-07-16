@@ -8,6 +8,7 @@ import { useRouter } from "next/navigation";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { useEffect } from "react";
+import { createClient } from "../../../../supabase/client";
 
 interface ItemEditFormProps {
   item: Item;
@@ -86,7 +87,13 @@ export default function ItemEditForm({
     setLoading(true);
     setError(null);
     try {
-      await updateItem(item.id, projectId, {
+      // Fetch current user (ownerId)
+      const supabase = createClient();
+      const { data: userData } = await supabase.auth.getUser();
+      const ownerId = userData?.user?.id;
+      if (!ownerId) throw new Error("User not authenticated");
+
+      await updateItem(item.id, ownerId, {
         name,
         type,
         data: {
@@ -98,11 +105,13 @@ export default function ItemEditForm({
         folder_id: folderId || null,
       });
 
-      // Redirect to the source folder if provided, otherwise to the project
-      if (sourceFolder && sourceFolder !== "uncategorized") {
-        router.push(`/projects/${projectId}/folders/${sourceFolder}`);
+      // Redirect to the item's folder, project, or /projects
+      if (item.folder_id) {
+        router.push(`/folders/${item.folder_id}`);
+      } else if (item.project_id) {
+        router.push(`/projects/${item.project_id}`);
       } else {
-        router.push(`/projects/${projectId}`);
+        router.push(`/projects`);
       }
     } catch (err: any) {
       setError(err.message || "Failed to update item");
@@ -117,12 +126,20 @@ export default function ItemEditForm({
     setLoading(true);
     setError(null);
     try {
-      await deleteItem(item.id, projectId);
-      // Redirect to the source folder if provided, otherwise to the project
-      if (sourceFolder && sourceFolder !== "uncategorized") {
-        router.push(`/projects/${projectId}/folders/${sourceFolder}`);
+      // Fetch current user (ownerId)
+      const supabase = createClient();
+      const { data: userData } = await supabase.auth.getUser();
+      const ownerId = userData?.user?.id;
+      if (!ownerId) throw new Error("User not authenticated");
+
+      await deleteItem(item.id, ownerId);
+      // Redirect to the item's folder, project, or /projects
+      if (item.folder_id) {
+        router.push(`/folders/${item.folder_id}`);
+      } else if (item.project_id) {
+        router.push(`/projects/${item.project_id}`);
       } else {
-        router.push(`/projects/${projectId}`);
+        router.push(`/projects`);
       }
     } catch (err: any) {
       setError(err.message || "Failed to delete item");
