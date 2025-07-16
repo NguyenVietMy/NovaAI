@@ -24,7 +24,24 @@ export default function NewFolderForm({ projectId }: { projectId: string }) {
     }
     setLoading(true);
     setError(null);
-    const res = await createFolder(projectId, name, color);
+    // Fetch userId from supabase client
+    const supabase = createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) {
+      setError("You must be signed in to create a folder.");
+      setLoading(false);
+      return;
+    }
+    const ownerId = user.id;
+    // Use new createFolder signature: name, ownerId, projectId, color
+    const res = await createFolder(
+      name,
+      ownerId,
+      projectId ? projectId : null,
+      color
+    );
     setLoading(false);
     if (res.success) {
       setName("");

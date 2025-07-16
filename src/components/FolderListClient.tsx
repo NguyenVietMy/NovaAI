@@ -19,11 +19,13 @@ import { createFolder } from "@/app/actions/projects/folderActions";
 interface FolderListClientProps {
   folders: FolderWithOwner[];
   projectId: string;
+  hideNewButton?: boolean;
 }
 
 export default function FolderListClient({
   folders: initialFolders,
   projectId,
+  hideNewButton = false,
 }: FolderListClientProps) {
   const router = useRouter();
   const supabase = createClient();
@@ -102,25 +104,27 @@ export default function FolderListClient({
 
   return (
     <div className="mb-10">
-      <div className="flex items-center mb-4">
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <button className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white border border-gray-200 shadow-sm hover:shadow-md transition font-medium text-gray-800">
-              <Plus className="w-5 h-5" /> New
-            </button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start">
-            <DropdownMenuItem onSelect={() => setModalOpen(true)}>
-              <FolderPlus className="w-4 h-4 mr-2" /> New folder
-            </DropdownMenuItem>
-            <DropdownMenuItem disabled>
-              <FilePlus className="w-4 h-4 mr-2" /> New item
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
+      {!hideNewButton && (
+        <div className="flex items-center mb-4">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white border border-gray-200 shadow-sm hover:shadow-md transition font-medium text-gray-800">
+                <Plus className="w-5 h-5" /> New
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start">
+              <DropdownMenuItem onSelect={() => setModalOpen(true)}>
+                <FolderPlus className="w-4 h-4 mr-2" /> New folder
+              </DropdownMenuItem>
+              <DropdownMenuItem disabled>
+                <FilePlus className="w-4 h-4 mr-2" /> New item
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      )}
       {/* New Folder Modal */}
-      {modalOpen && (
+      {!hideNewButton && modalOpen && (
         <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/20">
           <div className="bg-white rounded-lg shadow-lg p-6 min-w-[340px] relative">
             <div className="text-lg font-semibold mb-4">New folder</div>
@@ -188,7 +192,7 @@ export default function FolderListClient({
               setDeleteModalOpen(true);
             }}
             onClick={() => {
-              router.push(`/projects/${projectId}/folders/${folder.id}`);
+              router.push(`/folders/${folder.id}`);
             }}
           />
         ))}

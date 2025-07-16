@@ -306,7 +306,7 @@ export interface Project {
 
 export interface Folder {
   id: string;
-  project_id: string;
+  project_id: string | null;
   name: string;
   color: string;
   created_at: string;
@@ -328,7 +328,7 @@ export type ItemType =
 
 export interface Item {
   id: string;
-  project_id: string;
+  project_id: string | null;
   folder_id: string | null;
   type: ItemType;
   name: string;

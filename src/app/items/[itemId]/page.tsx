@@ -3,8 +3,8 @@ import {
   listItems,
   updateItem,
   deleteItem,
-} from "../../../../actions/projects/itemActions";
-import { listFolders } from "../../../../actions/projects/folderActions";
+} from "../../actions/projects/itemActions";
+import { listFolders } from "../../actions/projects/folderActions";
 import { notFound, redirect } from "next/navigation";
 import DashboardNavbar from "@/components/dashboard-navbar";
 import type { Folder, Item } from "@/types/supabase";
@@ -12,7 +12,7 @@ import type { Folder, Item } from "@/types/supabase";
 const ItemEditForm = dynamic(() => import("./ItemEditForm"), { ssr: false });
 
 interface ItemViewProps {
-  params: { projectId: string; itemId: string };
+  params: { itemId: string };
   searchParams?: { sourceFolder?: string };
 }
 
@@ -20,16 +20,16 @@ export default async function ItemViewPage({
   params,
   searchParams,
 }: ItemViewProps) {
-  const { projectId, itemId } = params;
+  const { itemId } = params;
   const { sourceFolder } = searchParams || {};
 
-  // Fetch all items in the project and find the one we want
-  const items: Item[] = await listItems(projectId);
+  // Fetch all items (or implement a getItemById if available)
+  const items: Item[] = await listItems("", ""); // fetch all items for the user
   const item = items.find((i) => i.id === itemId);
   if (!item) return notFound();
 
-  // Fetch all folders for the move dropdown
-  const folders: Folder[] = await listFolders(projectId);
+  // Fetch all folders for the move dropdown (optionally filter by owner)
+  const folders: Folder[] = await listFolders("", "");
 
   // Determine the back navigation target
   // If sourceFolder is provided, use it; otherwise fall back to item's current folder
@@ -44,17 +44,17 @@ export default async function ItemViewPage({
         <div className="mb-4">
           {backTarget ? (
             <a
-              href={`/projects/${projectId}/folders/${backTarget}`}
+              href={`/folders/${backTarget}`}
               className="inline-block text-blue-600 hover:underline"
             >
               ← Back to Folder
             </a>
           ) : (
             <a
-              href={`/projects/${projectId}`}
+              href={"/projects"}
               className="inline-block text-blue-600 hover:underline"
             >
-              ← Back to Project
+              ← Back to Projects
             </a>
           )}
         </div>
@@ -62,7 +62,7 @@ export default async function ItemViewPage({
         <ItemEditForm
           item={item}
           folders={folders}
-          projectId={projectId}
+          projectId={item.project_id || ""}
           sourceFolder={sourceFolder}
         />
       </div>

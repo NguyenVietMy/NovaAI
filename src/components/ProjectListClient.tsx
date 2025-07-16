@@ -86,18 +86,7 @@ export default function ProjectListClient({
     <>
       <div className="mb-10">
         <div className="flex items-center mb-4">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white border border-gray-200 shadow-sm hover:shadow-md transition font-medium text-gray-800">
-                <Plus className="w-5 h-5" /> New
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start">
-              <DropdownMenuItem onSelect={() => setNewProjectModalOpen(true)}>
-                <LayoutDashboard className="w-4 h-4 mr-2" /> New project
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          {/* Removed '+ New' button and dropdown menu here */}
         </div>
       </div>
 

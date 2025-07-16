@@ -14,6 +14,7 @@ import {
 } from "../../actions/projects/folderActions";
 import { NewItemModalButton } from "./NewItemModalButton";
 import type { Project, Folder, Item } from "@/types/supabase";
+import ProjectsNewMenu from "../ProjectsNewMenu";
 const NewFolderForm = dynamic(() => import("./NewFolderForm"), { ssr: false });
 
 interface ProjectDashboardProps {
@@ -42,8 +43,8 @@ export default async function ProjectDashboard({
   if (!project) return notFound();
 
   // Fetch folders and uncategorized items
-  const folders: Folder[] = await listFolders(projectId);
-  const items: Item[] = await listItems(projectId, null); // folderless items
+  const folders: Folder[] = await listFolders(userId, projectId);
+  const items: Item[] = await listItems(userId, projectId, null); // folderless items
 
   // Sorting (default: created_at desc)
   const sort = searchParams?.sort || "created_desc";
@@ -69,6 +70,12 @@ export default async function ProjectDashboard({
           </a>
         </div>
         <h1 className="text-2xl font-bold mb-6">{project.name}</h1>
+        {/* Move the FolderListClient's +New button to the top */}
+        <div className="mb-6 flex justify-start">
+          {/* Render only the FolderListClient's +New button here */}
+          {/* We'll need to extract the +New button logic from FolderListClient into a new component, e.g., ProjectNewMenu */}
+          <ProjectsNewMenu userId={userId} projectId={projectId} />
+        </div>
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-lg font-semibold">Folders</h2>
           <div className="ml-auto">
@@ -80,10 +87,14 @@ export default async function ProjectDashboard({
             </select>
           </div>
         </div>
-        <FolderListClient folders={folders} projectId={projectId} />
+        {/* Remove the +New button from inside FolderListClient */}
+        <FolderListClient
+          folders={folders}
+          projectId={projectId}
+          hideNewButton
+        />
         <div className="mb-6">
           <h2 className="text-lg font-semibold mb-4">Uncategorized Items</h2>
-          <NewItemModalButton projectId={projectId} />
         </div>
         <div className="space-y-2">
           {sortedItems.length === 0 && (
@@ -92,7 +103,7 @@ export default async function ProjectDashboard({
           {sortedItems.map((item) => (
             <a
               key={item.id}
-              href={`/projects/${projectId}/items/${item.id}`}
+              href={`/items/${item.id}`}
               className="bg-gray-100 rounded p-3 flex items-center justify-between hover:bg-gray-200 transition-colors border border-gray-200 hover:border-blue-400"
             >
               <span className="font-mono text-sm">{item.name}</span>

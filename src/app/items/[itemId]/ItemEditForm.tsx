@@ -3,10 +3,7 @@ import { useState } from "react";
 import type { Item, Folder, ItemType } from "@/types/supabase";
 import type { TimedBlock } from "@/app/actions/youtube/youtubeTranscriptActions";
 import type { ApiResponse } from "@/types/api";
-import {
-  updateItem,
-  deleteItem,
-} from "../../../../actions/projects/itemActions";
+import { updateItem, deleteItem } from "../../actions/projects/itemActions";
 import { useRouter } from "next/navigation";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";

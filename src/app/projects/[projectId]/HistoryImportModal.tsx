@@ -50,13 +50,25 @@ export function HistoryImportModal({
       const itemsToImport = historyItems.filter((item) =>
         selectedIds.includes(item.id)
       );
+      // Fetch userId from supabase client
+      const supabase = createClient();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) {
+        setImportError("You must be signed in to import items.");
+        setImporting(false);
+        return;
+      }
+      const ownerId = user.id;
       for (const item of itemsToImport) {
         const res = await createItem(
-          projectId,
           item.id, // name
           "transcript",
           item.output.data,
-          folderId
+          ownerId,
+          projectId ? projectId : null,
+          folderId ? folderId : null
         );
         if (!res.success) {
           setImportError(res.error || "Failed to import item: " + item.id);

@@ -4,39 +4,51 @@ import { supabaseAction } from "@/lib/supabaseAction";
 import type { Folder, FolderWithOwner } from "@/types/supabase";
 import type { ApiResponse } from "@/types/api";
 
-// Create a new folder in a project
+// Create a new folder (optionally in a project)
 export async function createFolder(
-  projectId: string,
   name: string,
+  ownerId: string,
+  projectId?: string | null,
   color: string = "#e5e7eb"
 ): Promise<ApiResponse<Folder>> {
-  const result = await supabaseAction(async () => {
-    const supabase = await createClient();
-    const { data: userData } = await supabase.auth.getUser();
-    const owner_id = userData?.user?.id;
-    if (!owner_id) throw new Error("User not authenticated");
-    return await supabase
-      .from("folders")
-      .insert([{ project_id: projectId, name, color, owner_id }])
-      .select()
-      .single();
-  }, `/projects/${projectId}`);
+  const result = await supabaseAction(
+    async () => {
+      const supabase = await createClient();
+      return await supabase
+        .from("folders")
+        .insert([
+          { project_id: projectId ?? null, name, color, owner_id: ownerId },
+        ])
+        .select()
+        .single();
+    },
+    projectId ? `/projects/${projectId}` : "/folders"
+  );
   return {
     ...result,
     data: result.data ?? undefined,
   };
 }
 
-// List all folders in a project
+// List folders by context (global or project)
 export async function listFolders(
-  projectId: string
+  ownerId: string,
+  projectId?: string | null
 ): Promise<FolderWithOwner[]> {
   const supabase = await createClient();
-  const { data } = await supabase
+  let query = supabase
     .from("folders")
     .select("*, users:owner_id(name, email)")
-    .eq("project_id", projectId)
-    .order("created_at", { ascending: false });
+    .eq("owner_id", ownerId);
+  if (projectId !== undefined) {
+    if (projectId === null) {
+      query = query.is("project_id", null);
+    } else {
+      query = query.eq("project_id", projectId);
+    }
+  }
+  query = query.order("created_at", { ascending: false });
+  const { data } = await query;
   return data || [];
 }
 
@@ -44,7 +56,7 @@ export async function listFolders(
 export async function renameFolder(
   folderId: string,
   newName: string,
-  projectId: string
+  ownerId: string
 ): Promise<ApiResponse<null>> {
   const result = await supabaseAction(async () => {
     const supabase = await createClient();
@@ -52,8 +64,8 @@ export async function renameFolder(
       .from("folders")
       .update({ name: newName })
       .eq("id", folderId)
-      .eq("project_id", projectId);
-  }, `/projects/${projectId}`);
+      .eq("owner_id", ownerId);
+  }, "/folders");
   return {
     ...result,
     data: undefined,
@@ -64,7 +76,7 @@ export async function renameFolder(
 export async function updateFolderColor(
   folderId: string,
   color: string,
-  projectId: string
+  ownerId: string
 ): Promise<ApiResponse<null>> {
   const result = await supabaseAction(async () => {
     const supabase = await createClient();
@@ -72,8 +84,8 @@ export async function updateFolderColor(
       .from("folders")
       .update({ color })
       .eq("id", folderId)
-      .eq("project_id", projectId);
-  }, `/projects/${projectId}`);
+      .eq("owner_id", ownerId);
+  }, "/folders");
   return {
     ...result,
     data: undefined,
@@ -83,7 +95,7 @@ export async function updateFolderColor(
 // Delete a folder (items will have folder_id set to null)
 export async function deleteFolder(
   folderId: string,
-  projectId: string
+  ownerId: string
 ): Promise<ApiResponse<null>> {
   const result = await supabaseAction(async () => {
     const supabase = await createClient();
@@ -91,8 +103,8 @@ export async function deleteFolder(
       .from("folders")
       .delete()
       .eq("id", folderId)
-      .eq("project_id", projectId);
-  }, `/projects/${projectId}`);
+      .eq("owner_id", ownerId);
+  }, "/folders");
   return {
     ...result,
     data: undefined,
@@ -124,7 +136,61 @@ export async function shareFolder(
   if (error) {
     return { success: false, error: error.message };
   }
-  return { success: true };
+
+  // --- Share all items in the folder (optimized) ---
+  // 1. Get all item IDs in the folder
+  const { data: items, error: itemsError } = await supabase
+    .from("items")
+    .select("id")
+    .eq("folder_id", folderId);
+
+  if (itemsError) {
+    return { success: false, error: itemsError.message };
+  }
+
+  if (!items || items.length === 0) {
+    return { success: true, message: "No items to share." };
+  }
+
+  // 2. Prepare item IDs list
+  const itemIds = items.map((item) => item.id);
+
+  // 3. Get already shared items for this user (single query)
+  const { data: sharedItems, error: sharedError } = await supabase
+    .from("item_shares")
+    .select("item_id")
+    .in("item_id", itemIds)
+    .eq("user_id", user.id);
+
+  if (sharedError) {
+    return { success: false, error: sharedError.message };
+  }
+
+  const alreadySharedIds = new Set(sharedItems.map((s) => s.item_id));
+
+  // 4. Determine which items still need to be shared
+  const itemsToShare = itemIds.filter((id) => !alreadySharedIds.has(id));
+
+  if (itemsToShare.length === 0) {
+    return { success: true, message: "All items already shared." };
+  }
+
+  // 5. Insert sharing records in bulk
+  const inserts = itemsToShare.map((id) => ({
+    item_id: id,
+    user_id: user.id,
+    permission,
+  }));
+
+  const { error: insertError } = await supabase
+    .from("item_shares")
+    .insert(inserts);
+
+  if (insertError) {
+    return { success: false, error: insertError.message };
+  }
+
+  return { success: true, message: `${itemsToShare.length} items shared.` };
 }
 
 // Unshare a folder with a user
@@ -159,4 +225,18 @@ export async function listFolderShares(folderId: string) {
     email: row.users?.email,
   }));
   return { success: true, users };
+}
+
+// Fetch a folder by its ID (with owner info)
+export async function getFolderById(
+  folderId: string
+): Promise<FolderWithOwner | null> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("folders")
+    .select("*, users:owner_id(name, email)")
+    .eq("id", folderId)
+    .single();
+  if (error || !data) return null;
+  return data;
 }

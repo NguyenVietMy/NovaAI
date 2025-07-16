@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
+import { createClient } from "@/../supabase/client";
 import type { Item, ItemType } from "@/types/supabase";
 import type { ApiResponse } from "@/types/api";
 
@@ -26,7 +27,26 @@ export function NewItemForm({
     e.preventDefault();
     setLoading(true);
     setError(null);
-    const res = await createItem(projectId, name, type, {}, folderId);
+    // Fetch userId from supabase client
+    const supabase = createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) {
+      setError("You must be signed in to create an item.");
+      setLoading(false);
+      return;
+    }
+    const ownerId = user.id;
+    // Use new createItem signature: name, type, data, ownerId, projectId, folderId
+    const res = await createItem(
+      name,
+      type,
+      {},
+      ownerId,
+      projectId ? projectId : null,
+      folderId ? folderId : null
+    );
     setLoading(false);
     if (res.success) {
       setName("");
