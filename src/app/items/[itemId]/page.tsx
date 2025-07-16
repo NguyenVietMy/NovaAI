@@ -8,6 +8,7 @@ import { listFolders } from "../../actions/projects/folderActions";
 import { notFound, redirect } from "next/navigation";
 import DashboardNavbar from "@/components/dashboard-navbar";
 import type { Folder, Item } from "@/types/supabase";
+import { createClient } from "../../../../supabase/server";
 
 const ItemEditForm = dynamic(() => import("./ItemEditForm"), { ssr: false });
 
@@ -23,13 +24,19 @@ export default async function ItemViewPage({
   const { itemId } = params;
   const { sourceFolder } = searchParams || {};
 
-  // Fetch all items (or implement a getItemById if available)
-  const items: Item[] = await listItems("", ""); // fetch all items for the user
+  // Fetch current user (ownerId)
+  const supabase = await createClient();
+  const { data: userData } = await supabase.auth.getUser();
+  const ownerId = userData?.user?.id;
+  if (!ownerId) return notFound();
+
+  // Fetch all items for the current user
+  const items: Item[] = await listItems(ownerId);
   const item = items.find((i) => i.id === itemId);
   if (!item) return notFound();
 
-  // Fetch all folders for the move dropdown (optionally filter by owner)
-  const folders: Folder[] = await listFolders("", "");
+  // Fetch all folders for the current user
+  const folders: Folder[] = await listFolders(ownerId);
 
   // Determine the back navigation target
   // If sourceFolder is provided, use it; otherwise fall back to item's current folder

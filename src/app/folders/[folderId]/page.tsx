@@ -97,7 +97,7 @@ export default async function FolderViewPage({
           {sortedItems.map((item) => (
             <a
               key={item.id}
-              href={`/items/${item.id}?sourceFolder=${folderId}`}
+              href={`/items/${item.id}`}
               className="bg-gray-100 rounded p-3 flex items-center justify-between hover:bg-gray-200 transition-colors"
             >
               <span className="font-mono text-sm">{item.name}</span>
