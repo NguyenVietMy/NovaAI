@@ -208,6 +208,76 @@ export default function ItemEditForm({
                 </div>
               ))}
             </div>
+            <Button
+              type="button"
+              className="mt-4"
+              onClick={() => {
+                // Helper to parse timestamp string to seconds
+                function parseTimestamp(ts: string) {
+                  const [h, m, s] = ts.split(":");
+                  const [sec, ms] = s.split(".");
+                  return (
+                    parseInt(h) * 3600 +
+                    parseInt(m) * 60 +
+                    parseInt(sec) +
+                    (ms ? parseInt(ms) / 1000 : 0)
+                  );
+                }
+                // Helper to format seconds to timestamp string
+                function formatTimestamp(totalSeconds: number) {
+                  const h = Math.floor(totalSeconds / 3600)
+                    .toString()
+                    .padStart(2, "0");
+                  const m = Math.floor((totalSeconds % 3600) / 60)
+                    .toString()
+                    .padStart(2, "0");
+                  const s = Math.floor(totalSeconds % 60)
+                    .toString()
+                    .padStart(2, "0");
+                  return `${h}:${m}:${s}.000`;
+                }
+                setTranscriptBlocks((prev) => {
+                  if (prev.length === 0) {
+                    // If no blocks, start at 00:00:00
+                    return [
+                      { start: "00:00:00.000", end: "00:00:20.000", text: "" },
+                    ];
+                  }
+                  const last = prev[prev.length - 1];
+                  const startSec = parseTimestamp(last.start);
+                  const endSec = parseTimestamp(last.end);
+                  const duration = endSec - startSec;
+                  if (duration < 20) {
+                    // Extend last block to 20s
+                    const newEnd = formatTimestamp(startSec + 20);
+                    const updated = prev
+                      .slice(0, -1)
+                      .concat({ ...last, end: newEnd });
+                    // Add a new empty block after
+                    return [
+                      ...updated,
+                      {
+                        start: newEnd,
+                        end: formatTimestamp(startSec + 40),
+                        text: "",
+                      },
+                    ];
+                  } else {
+                    // Add a new empty block after
+                    return [
+                      ...prev,
+                      {
+                        start: last.end,
+                        end: formatTimestamp(parseTimestamp(last.end) + 20),
+                        text: "",
+                      },
+                    ];
+                  }
+                });
+              }}
+            >
+              + Add 20s Block
+            </Button>
           </TabsContent>
           {/* Detailed Timestamp Tab */}
           <TabsContent value="timed">
