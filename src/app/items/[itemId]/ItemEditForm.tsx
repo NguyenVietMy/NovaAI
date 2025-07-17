@@ -50,6 +50,24 @@ export default function ItemEditForm({
     setTimedLines(transcriptTimed.split("\n"));
   }, [transcriptTimed]);
 
+  // State for editing timestamp and text for each line
+  const [editTimestamps, setEditTimestamps] = useState<string[]>(() =>
+    timedLines.map((line) => parseTimestampLine(line).timestamp)
+  );
+  const [editTexts, setEditTexts] = useState<string[]>(() =>
+    timedLines.map((line) => parseTimestampLine(line).text)
+  );
+  const [editErrors, setEditErrors] = useState<(string | null)[]>(() =>
+    timedLines.map(() => null)
+  );
+  useEffect(() => {
+    setEditTimestamps(
+      timedLines.map((line) => parseTimestampLine(line).timestamp)
+    );
+    setEditTexts(timedLines.map((line) => parseTimestampLine(line).text));
+    setEditErrors(timedLines.map(() => null));
+  }, [timedLines.length]);
+
   // Helper: is timestamp line
   function isTimestamp(line: string) {
     return /^\d{2}:\d{2}:\d{2}\.\d{3}/.test(line.trim());
@@ -283,30 +301,92 @@ export default function ItemEditForm({
           <TabsContent value="timed">
             <div className="space-y-2 max-h-80 overflow-y-auto">
               {timedLines.map((line, idx) => {
-                const { timestamp, text } = parseTimestampLine(line);
+                function isValidTimestamp(ts: string) {
+                  return /^\d{2}:\d{2}:\d{2}\.\d{3}$/.test(ts);
+                }
+                const error = editErrors[idx];
                 return (
                   <div
                     key={idx}
                     className="flex items-stretch rounded border border-gray-200 bg-gray-50"
                   >
                     <div className="w-1/5 flex items-center justify-center bg-gray-200 text-xs font-mono px-2">
-                      {timestamp}
+                      <input
+                        type="text"
+                        className={`w-full bg-transparent outline-none font-mono text-xs px-1 ${error ? "border-red-500 border" : ""}`}
+                        value={editTimestamps[idx]}
+                        onChange={(e) => {
+                          const newTs = e.target.value;
+                          setEditTimestamps((tsArr) =>
+                            tsArr.map((v, i) => (i === idx ? newTs : v))
+                          );
+                          // Only validate format
+                          let err = null;
+                          if (!isValidTimestamp(newTs)) {
+                            err = "Format must be 00:00:00.000";
+                          }
+                          setEditErrors((errArr) =>
+                            errArr.map((v, i) => (i === idx ? err : v))
+                          );
+                        }}
+                        onBlur={() => {
+                          // Only save if valid
+                          if (!editErrors[idx]) {
+                            handleTimedLineEdit(
+                              idx,
+                              `${editTimestamps[idx]} ${editTexts[idx]}`
+                            );
+                          }
+                        }}
+                        maxLength={12}
+                        placeholder="00:00:00.000"
+                      />
                     </div>
                     <div className="w-4/5 px-2 py-1 flex items-center h-[2.5rem]">
                       <EditableBlock
-                        text={text}
+                        text={editTexts[idx]}
                         onSave={(newText) => {
-                          handleTimedLineEdit(
-                            idx,
-                            timestamp ? `${timestamp} ${newText}` : newText
+                          setEditTexts((txtArr) =>
+                            txtArr.map((v, i) => (i === idx ? newText : v))
                           );
+                          if (!editErrors[idx]) {
+                            handleTimedLineEdit(
+                              idx,
+                              `${editTimestamps[idx]} ${newText}`
+                            );
+                          }
                         }}
+                        placeholder={
+                          editTexts[idx]
+                            ? undefined
+                            : "Enter transcript text..."
+                        }
                       />
                     </div>
+                    {error && (
+                      <div className="text-xs text-red-500 px-2 flex items-center">
+                        {error}
+                      </div>
+                    )}
                   </div>
                 );
               })}
             </div>
+            <Button
+              type="button"
+              className="mt-4"
+              onClick={() => {
+                setTimedLines((prev) => [
+                  ...prev,
+                  "00:00:00.000 ", // timestamp with empty text
+                ]);
+                setEditTimestamps((prev) => [...prev, "00:00:00.000"]);
+                setEditTexts((prev) => [...prev, ""]);
+                setEditErrors((prev) => [...prev, null]);
+              }}
+            >
+              + Add Timestamp Line
+            </Button>
           </TabsContent>
         </Tabs>
       </div>
@@ -362,9 +442,11 @@ export default function ItemEditForm({
 function EditableBlock({
   text,
   onSave,
+  placeholder,
 }: {
   text: string;
   onSave: (t: string) => void;
+  placeholder?: string;
 }) {
   const [editing, setEditing] = useState(false);
   const [value, setValue] = useState(text);
@@ -389,13 +471,16 @@ function EditableBlock({
         }
       }}
       rows={1}
+      placeholder={placeholder}
     />
   ) : (
     <div
       className="cursor-pointer whitespace-pre-line min-h-[2rem] w-full flex items-center"
       onClick={() => setEditing(true)}
     >
-      {text || <span className="text-gray-400">(empty)</span>}
+      {text || (
+        <span className="text-gray-400">{placeholder || "(empty)"}</span>
+      )}
     </div>
   );
 }
