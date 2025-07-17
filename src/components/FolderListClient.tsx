@@ -68,11 +68,13 @@ export default function FolderListClient({
   }
 
   async function handleRename(folderId: string, name: string) {
-    await supabase
-      .from("folders")
-      .update({ name })
-      .eq("id", folderId)
-      .eq("project_id", projectId);
+    let query = supabase.from("folders").update({ name }).eq("id", folderId);
+    if (projectId === "") {
+      query = query.is("project_id", null);
+    } else {
+      query = query.eq("project_id", projectId);
+    }
+    await query;
     setFolders((folders) =>
       folders.map((f) => (f.id === folderId ? { ...f, name } : f))
     );
@@ -80,11 +82,13 @@ export default function FolderListClient({
     setRenameTarget(null);
   }
   async function handleChangeColor(folderId: string, color: string) {
-    await supabase
-      .from("folders")
-      .update({ color })
-      .eq("id", folderId)
-      .eq("project_id", projectId);
+    let query = supabase.from("folders").update({ color }).eq("id", folderId);
+    if (projectId === "") {
+      query = query.is("project_id", null);
+    } else {
+      query = query.eq("project_id", projectId);
+    }
+    await query;
     setFolders((folders) =>
       folders.map((f) => (f.id === folderId ? { ...f, color } : f))
     );
@@ -92,11 +96,13 @@ export default function FolderListClient({
     setColorTarget(null);
   }
   async function handleDelete(folderId: string) {
-    await supabase
-      .from("folders")
-      .delete()
-      .eq("id", folderId)
-      .eq("project_id", projectId);
+    let query = supabase.from("folders").delete().eq("id", folderId);
+    if (projectId === "") {
+      query = query.is("project_id", null);
+    } else {
+      query = query.eq("project_id", projectId);
+    }
+    await query;
     setFolders((folders) => folders.filter((f) => f.id !== folderId));
     setDeleteModalOpen(false);
     setDeleteTarget(null);

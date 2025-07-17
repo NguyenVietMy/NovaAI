@@ -5,8 +5,15 @@ import { listItems } from "../actions/projects/itemActions";
 import { createClient } from "../../../supabase/server";
 import DashboardNavbar from "@/components/dashboard-navbar";
 import ProjectListClient from "@/components/ProjectListClient";
+import FolderCard from "@/components/FolderCard";
+import {
+  renameFolder,
+  updateFolderColor,
+  deleteFolder,
+} from "../actions/projects/folderActions";
 import type { Project, Folder, Item } from "@/types/supabase";
 import ProjectsNewMenu from "./ProjectsNewMenu";
+import FolderListClient from "@/components/FolderListClient";
 
 export default async function ProjectsPage() {
   const supabase = await createClient();
@@ -21,7 +28,10 @@ export default async function ProjectsPage() {
   const userId = user.id;
   const projects: Project[] = await listProjects(userId);
   // Fetch global folders and items (not in any project)
-  const globalFolders: Folder[] = await listFolders(userId, null);
+  const globalFolders = (await listFolders(
+    userId,
+    null
+  )) as import("@/types/supabase").FolderWithOwner[];
   const globalItems: Item[] = await listItems(userId, null, null);
 
   return (
@@ -39,24 +49,11 @@ export default async function ProjectsPage() {
           {globalFolders.length === 0 ? (
             <div className="text-gray-500 mb-4">No global folders.</div>
           ) : (
-            <ul className="mb-4">
-              {globalFolders.map((folder) => (
-                <li
-                  key={folder.id}
-                  className="mb-2 p-3 bg-gray-100 rounded border border-gray-200"
-                >
-                  <a
-                    href={`/folders/${folder.id}`}
-                    className="font-mono text-sm hover:underline"
-                  >
-                    {folder.name}
-                  </a>
-                  <span className="ml-2 text-xs text-gray-500">
-                    {folder.color}
-                  </span>
-                </li>
-              ))}
-            </ul>
+            <FolderListClient
+              folders={globalFolders}
+              projectId={""}
+              hideNewButton={true}
+            />
           )}
         </div>
         {/* Global Items Section */}
