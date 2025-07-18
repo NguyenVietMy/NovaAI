@@ -42,6 +42,12 @@ export default async function ProjectsPage() {
         <div className="mb-6 flex justify-start">
           <ProjectsNewMenu userId={userId} showNewProjectOption={true} />
         </div>
+        {/* Notification about folder sharing limitation */}
+        <div className="mb-4 p-3 bg-yellow-100 border border-yellow-300 rounded text-yellow-800 text-sm">
+          <strong>Note:</strong> Items added to a folder <u>after</u> it is
+          shared will not be visible to recipients unless you unshare the folder
+          and share it again. SORRY FOR THE BUG {";)"}
+        </div>
         <ProjectListClient projects={projects} userId={userId} />
         {/* Global Folders Section */}
         <div className="mt-10">

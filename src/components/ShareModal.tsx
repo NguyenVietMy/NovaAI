@@ -124,7 +124,6 @@ export default function ShareModal({
             disabled={loading}
           >
             <option value="view">Viewer</option>
-            <option value="edit">Editor</option>
           </select>
           <Button type="submit" disabled={loading || !email.trim()}>
             Share
