@@ -171,38 +171,73 @@ export default function FolderListClient({
           </div>
         </div>
       )}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-        {folders.length === 0 && (
-          <div className="text-gray-500">No folders yet.</div>
-        )}
-        {folders.map((folder: FolderWithOwner) => (
-          <FolderCard
-            key={folder.id}
-            id={folder.id}
-            name={folder.name}
-            color={folder.color}
-            ownerName={folder.users?.name}
-            ownerEmail={folder.users?.email || folder.owner_id || "unknown"}
-            onRename={() => {
-              setRenameTarget(folder);
-              setRenameValue(folder.name);
-              setRenameModalOpen(true);
-            }}
-            onChangeColor={() => {
-              setColorTarget(folder);
-              setColorValue(folder.color);
-              setColorModalOpen(true);
-            }}
-            onDelete={() => {
-              setDeleteTarget(folder);
-              setDeleteModalOpen(true);
-            }}
-            onClick={() => {
-              router.push(`/folders/${folder.id}`);
-            }}
-          />
-        ))}
-      </div>
+      {projectId === "" ? (
+        <div className="flex flex-row gap-x-4">
+          {folders.length === 0 && (
+            <div className="text-gray-500">No folders yet.</div>
+          )}
+          {folders.map((folder: FolderWithOwner) => (
+            <FolderCard
+              key={folder.id}
+              id={folder.id}
+              name={folder.name}
+              color={folder.color}
+              ownerName={folder.users?.name}
+              ownerEmail={folder.users?.email || folder.owner_id || "unknown"}
+              onRename={() => {
+                setRenameTarget(folder);
+                setRenameValue(folder.name);
+                setRenameModalOpen(true);
+              }}
+              onChangeColor={() => {
+                setColorTarget(folder);
+                setColorValue(folder.color);
+                setColorModalOpen(true);
+              }}
+              onDelete={() => {
+                setDeleteTarget(folder);
+                setDeleteModalOpen(true);
+              }}
+              onClick={() => {
+                router.push(`/folders/${folder.id}`);
+              }}
+            />
+          ))}
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-4 gap-y-4">
+          {folders.length === 0 && (
+            <div className="text-gray-500">No folders yet.</div>
+          )}
+          {folders.map((folder: FolderWithOwner) => (
+            <FolderCard
+              key={folder.id}
+              id={folder.id}
+              name={folder.name}
+              color={folder.color}
+              ownerName={folder.users?.name}
+              ownerEmail={folder.users?.email || folder.owner_id || "unknown"}
+              onRename={() => {
+                setRenameTarget(folder);
+                setRenameValue(folder.name);
+                setRenameModalOpen(true);
+              }}
+              onChangeColor={() => {
+                setColorTarget(folder);
+                setColorValue(folder.color);
+                setColorModalOpen(true);
+              }}
+              onDelete={() => {
+                setDeleteTarget(folder);
+                setDeleteModalOpen(true);
+              }}
+              onClick={() => {
+                router.push(`/folders/${folder.id}`);
+              }}
+            />
+          ))}
+        </div>
+      )}
       {/* Rename Modal */}
       {renameModalOpen && renameTarget && (
         <Dialog open={renameModalOpen} onOpenChange={setRenameModalOpen}>

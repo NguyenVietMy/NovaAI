@@ -10,6 +10,9 @@ import { Button } from "@/components/ui/button";
 import { useEffect } from "react";
 import { createClient } from "../../../../supabase/client";
 
+// Add FolderIdType above the interface
+type FolderIdType = string | null;
+
 interface ItemEditFormProps {
   item: Item;
   folders: Folder[];
@@ -27,7 +30,7 @@ export default function ItemEditForm({
   const [name, setName] = useState(item.name);
   const [type, setType] = useState<ItemType>(item.type);
   const [data, setData] = useState(JSON.stringify(item.data, null, 2));
-  const [folderId, setFolderId] = useState(item.folder_id || "");
+  const [folderId, setFolderId] = useState<FolderIdType>(item.folder_id || "");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -111,6 +114,22 @@ export default function ItemEditForm({
       const ownerId = userData?.user?.id;
       if (!ownerId) throw new Error("User not authenticated");
 
+      // --- FOLDER/PROJECT LOGIC FIX ---
+      let newProjectId = null;
+      let newFolderId = folderId;
+      if (folderId === null) {
+        // Global: set both to null
+        newProjectId = null;
+        newFolderId = null;
+      } else if (folderId) {
+        // Find the selected folder and use its project_id
+        const selectedFolder = folders.find((f) => f.id === folderId);
+        newProjectId = selectedFolder ? selectedFolder.project_id : null;
+      } else {
+        // Uncategorized: keep in current project
+        newProjectId = projectId || null;
+      }
+
       await updateItem(item.id, ownerId, {
         name,
         type,
@@ -120,14 +139,15 @@ export default function ItemEditForm({
           transcriptBlocks,
           transcriptTimed: timedLines.join("\n"),
         },
-        folder_id: folderId || null,
+        folder_id: newFolderId || null,
+        project_id: newProjectId,
       });
 
       // Redirect to the item's folder, project, or /projects
-      if (item.folder_id) {
-        router.push(`/folders/${item.folder_id}`);
-      } else if (item.project_id) {
-        router.push(`/projects/${item.project_id}`);
+      if (newFolderId) {
+        router.push(`/folders/${newFolderId}`);
+      } else if (newProjectId) {
+        router.push(`/projects/${newProjectId}`);
       } else {
         router.push(`/projects`);
       }
@@ -395,10 +415,17 @@ export default function ItemEditForm({
         <label className="block font-medium mb-1">Folder</label>
         <select
           className="w-full border rounded px-3 py-2"
-          value={folderId}
-          onChange={(e) => setFolderId(e.target.value)}
+          value={folderId === null ? "__global__" : folderId || ""}
+          onChange={(e) => {
+            if (e.target.value === "__global__") {
+              setFolderId(null);
+            } else {
+              setFolderId(e.target.value);
+            }
+          }}
         >
-          <option value="">Uncategorized</option>
+          {projectId && <option value="">Uncategorized</option>}
+          <option value="__global__">Global</option>
           {folders.map((folder) => (
             <option key={folder.id} value={folder.id}>
               {folder.name}

@@ -104,7 +104,7 @@ export default async function ProjectDashboard({
             <a
               key={item.id}
               href={`/items/${item.id}`}
-              className="bg-gray-100 rounded p-3 flex items-center justify-between hover:bg-gray-200 transition-colors border border-gray-200 hover:border-blue-400"
+              className="bg-gray-100 rounded p-3 flex items-center justify-between hover:bg-gray-200 transition border border-gray-200"
             >
               <span className="font-mono text-sm">{item.name}</span>
               <span className="text-xs text-gray-500">{item.type}</span>

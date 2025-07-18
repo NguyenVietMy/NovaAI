@@ -62,24 +62,20 @@ export default async function ProjectsPage() {
           {globalItems.length === 0 ? (
             <div className="text-gray-500 mb-4">No global items.</div>
           ) : (
-            <ul className="mb-4">
+            <div className="mb-4 space-y-2">
               {globalItems.map((item) => (
-                <li
+                <a
                   key={item.id}
-                  className="mb-2 p-3 bg-gray-100 rounded border border-gray-200"
+                  href={`/items/${item.id}`}
+                  className="block mb-2 p-3 bg-gray-100 rounded border border-gray-200 hover:bg-gray-200 transition"
                 >
-                  <a
-                    href={`/items/${item.id}`}
-                    className="font-mono text-sm hover:underline"
-                  >
-                    {item.name}
-                  </a>
+                  <span className="font-mono text-sm">{item.name}</span>
                   <span className="ml-2 text-xs text-gray-500">
                     {item.type}
                   </span>
-                </li>
+                </a>
               ))}
-            </ul>
+            </div>
           )}
         </div>
       </div>

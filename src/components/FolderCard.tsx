@@ -44,7 +44,7 @@ export default function FolderCard({
   return (
     <>
       <div
-        className="relative min-w-[200px] max-w-[240px] h-[80px] rounded-xl flex items-center px-4 cursor-pointer transition-transform hover:shadow-lg hover:scale-[1.03] border border-gray-200"
+        className="relative min-w-[200px] max-w-[240px] h-[80px] rounded-xl flex items-center px-4 cursor-pointer transition-transform hover:shadow-lg hover:scale-[1.03] border border-gray-200 m-1"
         style={{ backgroundColor: color }}
         onClick={onClick}
       >
