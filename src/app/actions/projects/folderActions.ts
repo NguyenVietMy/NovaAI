@@ -240,3 +240,42 @@ export async function getFolderById(
   if (error || !data) return null;
   return data;
 }
+
+// List all global folders owned by or shared with the user
+export async function listOwnedAndSharedFolders(
+  userId: string
+): Promise<FolderWithOwner[]> {
+  const supabase = await createClient();
+  // 1. Get all folder_ids shared with the user
+  const { data: sharedRows } = await supabase
+    .from("folder_shares")
+    .select("folder_id")
+    .eq("user_id", userId);
+  const sharedFolderIds = (sharedRows || []).map((row: any) => row.folder_id);
+
+  // 2. Fetch all global folders owned by the user
+  let ownedQuery = supabase
+    .from("folders")
+    .select("*, users:owner_id(name, email)")
+    .is("project_id", null)
+    .eq("owner_id", userId);
+  const { data: ownedFolders } = await ownedQuery;
+
+  // 3. Fetch all shared folders (regardless of project_id)
+  let sharedFolders: FolderWithOwner[] = [];
+  if (sharedFolderIds.length > 0) {
+    const sharedQuery = supabase
+      .from("folders")
+      .select("*, users:owner_id(name, email)")
+      .in("id", sharedFolderIds);
+    const { data: sharedData } = await sharedQuery;
+    sharedFolders = sharedData || [];
+  }
+
+  // 4. Merge and dedupe by id
+  const allFolders = [...(ownedFolders || []), ...sharedFolders];
+  const deduped = allFolders.filter(
+    (folder, idx, arr) => arr.findIndex((f) => f.id === folder.id) === idx
+  );
+  return deduped;
+}

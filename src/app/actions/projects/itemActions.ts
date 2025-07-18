@@ -141,6 +141,80 @@ export async function moveItem(
   };
 }
 
+// List items owned by or shared with the user (optionally filtered by project or folder)
+export async function listOwnedAndSharedItems(
+  userId: string,
+  projectId?: string | null,
+  folderId?: string | null,
+  type?: ItemType
+): Promise<Item[]> {
+  const supabase = await createClient();
+  // 1. Get all item_ids shared with the user
+  const { data: sharedRows } = await supabase
+    .from("item_shares")
+    .select("item_id")
+    .eq("user_id", userId);
+  const sharedItemIds = (sharedRows || []).map((row: any) => row.item_id);
+
+  // 2. Fetch all items owned by the user (with filters)
+  let ownedQuery = supabase.from("items").select("*").eq("owner_id", userId);
+  if (projectId !== undefined) {
+    if (projectId === null) {
+      ownedQuery = ownedQuery.is("project_id", null);
+    } else {
+      ownedQuery = ownedQuery.eq("project_id", projectId);
+    }
+  }
+  if (folderId !== undefined) {
+    if (folderId === null) {
+      ownedQuery = ownedQuery.is("folder_id", null);
+    } else {
+      ownedQuery = ownedQuery.eq("folder_id", folderId);
+    }
+  }
+  if (type) {
+    ownedQuery = ownedQuery.eq("type", type);
+  }
+  ownedQuery = ownedQuery.order("created_at", { ascending: false });
+  const { data: ownedItems } = await ownedQuery;
+
+  // 3. Fetch all shared items (with filters)
+  let sharedItems: Item[] = [];
+  if (sharedItemIds.length > 0) {
+    let sharedQuery = supabase
+      .from("items")
+      .select("*")
+      .in("id", sharedItemIds);
+    if (projectId !== undefined) {
+      if (projectId === null) {
+        sharedQuery = sharedQuery.is("project_id", null);
+      } else {
+        sharedQuery = sharedQuery.eq("project_id", projectId);
+      }
+    }
+    if (folderId !== undefined) {
+      if (folderId === null) {
+        sharedQuery = sharedQuery.is("folder_id", null);
+      } else {
+        sharedQuery = sharedQuery.eq("folder_id", folderId);
+      }
+    }
+    if (type) {
+      sharedQuery = sharedQuery.eq("type", type);
+    }
+    sharedQuery = sharedQuery.order("created_at", { ascending: false });
+    const { data: sharedData } = await sharedQuery;
+    sharedItems = sharedData || [];
+  }
+
+  // 4. Merge and dedupe by id
+  const allItems = [...(ownedItems || []), ...sharedItems];
+  const deduped = allItems.filter(
+    (item, idx, arr) => arr.findIndex((i) => i.id === item.id) === idx
+  );
+  return deduped;
+}
+
 // --- Item Sharing Actions ---
 
 // Share an item with a user by email

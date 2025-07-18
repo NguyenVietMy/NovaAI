@@ -1,6 +1,6 @@
 import dynamic from "next/dynamic";
 import { getFolderById } from "../../actions/projects/folderActions";
-import { listItems } from "../../actions/projects/itemActions";
+import { listOwnedAndSharedItems } from "../../actions/projects/itemActions";
 import { notFound } from "next/navigation";
 import DashboardNavbar from "@/components/dashboard-navbar";
 import { NewItemModalButton } from "../../projects/[projectId]/NewItemModalButton";
@@ -40,7 +40,11 @@ export default async function FolderViewPage({
   if (!ownerId) return notFound();
 
   // Fetch items in this folder by folderId only, for the current user
-  const items: Item[] = await listItems(ownerId, folder.project_id, folderId);
+  const items: Item[] = await listOwnedAndSharedItems(
+    ownerId,
+    folder.project_id,
+    folderId
+  );
 
   // Sorting (default: created_at desc)
   const sort = searchParams?.sort || "created_desc";

@@ -172,7 +172,7 @@ export default function FolderListClient({
         </div>
       )}
       {projectId === "" ? (
-        <div className="flex flex-row gap-x-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-4 gap-y-4">
           {folders.length === 0 && (
             <div className="text-gray-500">No folders yet.</div>
           )}

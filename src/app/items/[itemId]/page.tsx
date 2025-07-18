@@ -3,6 +3,7 @@ import {
   listItems,
   updateItem,
   deleteItem,
+  listItemShares,
 } from "../../actions/projects/itemActions";
 import { listFolders } from "../../actions/projects/folderActions";
 import { notFound, redirect } from "next/navigation";
@@ -31,9 +32,23 @@ export default async function ItemViewPage({
   if (!ownerId) return notFound();
 
   // Fetch all items for the current user
-  const items: Item[] = await listItems(ownerId);
-  const item = items.find((i) => i.id === itemId);
+  // Try to fetch the item by ID (regardless of owner)
+  const { data: item, error: itemError } = await supabase
+    .from("items")
+    .select("*")
+    .eq("id", itemId)
+    .single();
   if (!item) return notFound();
+
+  // Check permission: owner or shared
+  const isOwner = item.owner_id === ownerId;
+  let isShared = false;
+  if (!isOwner) {
+    const shares = await listItemShares(itemId);
+    isShared =
+      shares.success && shares.users.some((u: any) => u.user_id === ownerId);
+  }
+  if (!isOwner && !isShared) return notFound();
 
   // Fetch all folders for the current user
   const folders: Folder[] = await listFolders(ownerId);

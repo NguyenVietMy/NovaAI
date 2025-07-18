@@ -14,6 +14,7 @@ import {
 import type { Project, Folder, Item } from "@/types/supabase";
 import ProjectsNewMenu from "./ProjectsNewMenu";
 import FolderListClient from "@/components/FolderListClient";
+import { listOwnedAndSharedFolders } from "../actions/projects/folderActions";
 
 export default async function ProjectsPage() {
   const supabase = await createClient();
@@ -28,9 +29,8 @@ export default async function ProjectsPage() {
   const userId = user.id;
   const projects: Project[] = await listProjects(userId);
   // Fetch global folders and items (not in any project)
-  const globalFolders = (await listFolders(
-    userId,
-    null
+  const globalFolders = (await listOwnedAndSharedFolders(
+    userId
   )) as import("@/types/supabase").FolderWithOwner[];
   const globalItems: Item[] = await listItems(userId, null, null);
 
