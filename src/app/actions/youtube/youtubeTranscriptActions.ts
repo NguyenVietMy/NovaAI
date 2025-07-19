@@ -71,7 +71,7 @@ const extractVideoId = (url: string): string | null => {
  */
 const downloadVttAndExtractText = async (
   videoId: string
-): Promise<{ plain: string; timed: string } | null> => {
+): Promise<{ plain: string; timed: string; vtt: string } | null> => {
   const outputName = `${videoId}.en.vtt`;
   const tempPath = path.join(tmpdir(), outputName);
 
@@ -98,7 +98,7 @@ const downloadVttAndExtractText = async (
         const { plain, timed } = parseVtt(raw);
 
         await fs.unlink(tempPath); // cleanup
-        resolve({ plain, timed });
+        resolve({ plain, timed, vtt: raw });
       } catch (err) {
         console.error("Failed to read/parse VTT:", err);
         resolve(null);
@@ -319,7 +319,7 @@ export const processYouTubeTranscript = async (formData: FormData) => {
       };
     }
 
-    const { plain, timed } = transcript;
+    const { plain, timed, vtt } = transcript;
 
     const timedBlocks = await groupTimedTranscript(timed, 20);
 
@@ -332,6 +332,7 @@ export const processYouTubeTranscript = async (formData: FormData) => {
         thumbnailUrl,
         transcriptPlain: plain,
         transcriptTimed: timed,
+        transcriptVtt: vtt,
         transcriptBlocks: timedBlocks,
         summary: await summarizeTranscript(plain),
         processedAt: new Date().toISOString(),

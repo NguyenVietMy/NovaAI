@@ -32,6 +32,7 @@ import {
   Play,
   Clock,
   Copy,
+  Send,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -39,6 +40,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
+import { useRef } from "react";
 
 interface TranscriptData {
   url: string;
@@ -46,6 +48,7 @@ interface TranscriptData {
   duration: string;
   transcriptPlain: string;
   transcriptTimed: string;
+  transcriptVtt: string;
   transcriptBlocks: TimedBlock[];
   summary: string;
   processedAt: string;
@@ -76,6 +79,28 @@ export default function Dashboard() {
   const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [copyStatus, setCopyStatus] = useState<string>("");
   const [activeTab, setActiveTab] = useState("plain");
+
+  // --- AI Chat State ---
+  const [chatMessages, setChatMessages] = useState<
+    { role: "user" | "ai"; content: string }[]
+  >([]);
+  const [chatInput, setChatInput] = useState("");
+  const chatEndRef = useRef<HTMLDivElement>(null);
+
+  // Scroll to bottom when new message
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [chatMessages]);
+
+  // Placeholder send handler (no AI logic yet)
+  const handleSendChat = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    const input = chatInput.trim();
+    if (!input) return;
+    setChatMessages((msgs) => [...msgs, { role: "user", content: input }]);
+    setChatInput("");
+    // TODO: Add AI response logic here
+  };
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -122,7 +147,15 @@ export default function Dashboard() {
   };
 
   const downloadTranscript = (
-    format: "txt" | "srt" | "json",
+    format:
+      | "txt"
+      | "srt"
+      | "json"
+      | "vtt"
+      | "vtt-clean"
+      | "vtt-advanced"
+      | "csv"
+      | "md",
     txtVariant?: "withTimestamp" | "plain"
   ) => {
     if (!transcriptData) return;
@@ -134,9 +167,7 @@ export default function Dashboard() {
     switch (format) {
       case "txt":
         if (txtVariant === "withTimestamp") {
-          content = transcriptData.transcriptBlocks
-            .map((block) => `${block.start} - ${block.end}\n${block.text}`)
-            .join("\n\n");
+          content = transcriptData.transcriptTimed;
           filename = `transcript-${Date.now()}-with-timestamps.txt`;
         } else {
           content = transcriptData.transcriptPlain;
@@ -145,8 +176,22 @@ export default function Dashboard() {
         mimeType = "text/plain";
         break;
       case "srt":
-        // Mock SRT format
-        content = `1\n00:00:00,000 --> 00:00:10,000\n${transcriptData.transcriptPlain.substring(0, 100)}...\n\n2\n00:00:10,000 --> 00:00:20,000\n${transcriptData.transcriptPlain.substring(100, 200)}...`;
+        // Generate SRT from transcriptTimed (pattern: time1->time2, text1)
+        const timedLines = transcriptData.transcriptTimed
+          .split("\n")
+          .filter(Boolean);
+        const srtBlocks = [];
+        for (let i = 0; i < timedLines.length - 1; i++) {
+          const [start, ...textArr] = timedLines[i].split(/\s{2,}/);
+          const [end] = timedLines[i + 1].split(/\s{2,}/);
+          if (!start || !end || textArr.length === 0) continue;
+          // SRT expects comma for ms
+          const toSrtTime = (t: string) => t.replace(/\.(\d{3})$/, ",$1");
+          srtBlocks.push(
+            `${i + 1}\n${toSrtTime(start)} --> ${toSrtTime(end)}\n${textArr.join(" ")}\n`
+          );
+        }
+        content = srtBlocks.join("\n");
         filename = `transcript-${Date.now()}.srt`;
         mimeType = "text/plain";
         break;
@@ -154,6 +199,82 @@ export default function Dashboard() {
         content = JSON.stringify(transcriptData, null, 2);
         filename = `transcript-${Date.now()}.json`;
         mimeType = "application/json";
+        break;
+      case "vtt":
+        content = transcriptData.transcriptVtt;
+        filename = `transcript-${Date.now()}.vtt`;
+        mimeType = "text/vtt";
+        break;
+      case "vtt-clean":
+        // Cleaned VTT: SRT-to-VTT logic
+        const timedLinesVtt = transcriptData.transcriptTimed
+          .split("\n")
+          .filter(Boolean);
+        const vttBlocks = [];
+        for (let i = 0; i < timedLinesVtt.length - 1; i++) {
+          const [start, ...textArr] = timedLinesVtt[i].split(/\s{2,}/);
+          const [end] = timedLinesVtt[i + 1].split(/\s{2,}/);
+          if (!start || !end || textArr.length === 0) continue;
+          // VTT expects dot for ms
+          const toVttTime = (t: string) => t.replace(/\.(\d{3})$/, ".$1");
+          vttBlocks.push(
+            `${toVttTime(start)} --> ${toVttTime(end)}\n${textArr.join(" ")}\n`
+          );
+        }
+        content = `WEBVTT\n\n${vttBlocks.join("\n")}`;
+        filename = `transcript-${Date.now()}-cleaned.vtt`;
+        mimeType = "text/vtt";
+        break;
+      case "vtt-advanced":
+        // Advanced VTT: original
+        content = transcriptData.transcriptVtt;
+        filename = `transcript-${Date.now()}-advanced.vtt`;
+        mimeType = "text/vtt";
+        break;
+      case "csv":
+        // CSV from transcriptTimed: Start,End,Text
+        const timedLinesCsv = transcriptData.transcriptTimed
+          .split("\n")
+          .filter(Boolean);
+        let csvRows = ["Start,End,Text"];
+        for (let i = 0; i < timedLinesCsv.length - 1; i++) {
+          const [start, ...textArr] = timedLinesCsv[i].split(/\s{2,}/);
+          const [end] = timedLinesCsv[i + 1].split(/\s{2,}/);
+          if (!start || !end || textArr.length === 0) continue;
+          // Escape quotes in text for CSV
+          const text = textArr.join(" ").replace(/"/g, '""');
+          csvRows.push(`"${start}","${end}","${text}"`);
+        }
+        content = csvRows.join("\n");
+        filename = `transcript-${Date.now()}.csv`;
+        mimeType = "text/csv";
+        break;
+      case "md":
+        // Markdown export: Title, ID, then transcript with start time only (seconds only)
+        const mdTitle = transcriptData.title || "";
+        // Try to extract YouTube ID from URL
+        let mdId = "";
+        try {
+          const urlObj = new URL(transcriptData.url);
+          mdId =
+            urlObj.searchParams.get("v") ||
+            urlObj.pathname.split("/").pop() ||
+            "";
+        } catch {}
+        let md = `# Video Information\n\n**Title:** ${mdTitle}\n**ID:** ${mdId}\n\n## Transcript\n\n`;
+        const timedLinesMd = transcriptData.transcriptTimed
+          .split("\n")
+          .filter(Boolean);
+        for (const line of timedLinesMd) {
+          const [start, ...textArr] = line.split(/\s{2,}/);
+          if (!start || textArr.length === 0) continue;
+          // Remove milliseconds from start time
+          const startNoMs = start.replace(/\.(\d{3})$/, "");
+          md += `**[${startNoMs}]** ${textArr.join(" ")}\n\n`;
+        }
+        content = md;
+        filename = `transcript-${Date.now()}.md`;
+        mimeType = "text/markdown";
         break;
     }
 
@@ -384,7 +505,7 @@ export default function Dashboard() {
 
         {/* Transcript Results */}
         {transcriptData && (
-          <Card>
+          <Card className="relative flex flex-col h-[1400px]">
             <CardHeader>
               <CardTitle className="flex items-center justify-between">
                 <span className="flex items-center gap-2">
@@ -393,21 +514,45 @@ export default function Dashboard() {
                 </span>
               </CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="flex-1 flex flex-col min-h-0">
               <Tabs
                 defaultValue="plain"
-                className="w-full"
+                className="relative flex-1 flex flex-col min-h-0 w-full"
                 value={activeTab}
                 onValueChange={setActiveTab}
               >
-                <TabsList className="grid w-full grid-cols-2">
+                <TabsList className="grid w-full grid-cols-2 z-10">
                   <TabsTrigger value="plain">Full Transcript</TabsTrigger>
-                  <TabsTrigger value="summary">AI Summary</TabsTrigger>
+                  <TabsTrigger value="summary">AI Chat</TabsTrigger>
                 </TabsList>
                 {/* Copy/Download Buttons */}
-                <div className="mt-2 mb-4 flex items-center">
+                <div className="mt-2 mb-4 flex items-center z-10">
                   {activeTab === "plain" ? (
                     <>
+                      {/* Move Copy button to the far left */}
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="flex gap-2"
+                          >
+                            <Copy className="h-4 w-4" />
+                            Copy
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="start">
+                          <DropdownMenuItem
+                            onClick={() => handleCopy("withTimestamp")}
+                          >
+                            Copy with timestamp
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleCopy("plain")}>
+                            Copy without timestamp
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                      {/* Download buttons follow */}
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <Button variant="outline" size="sm">
@@ -435,39 +580,53 @@ export default function Dashboard() {
                         size="sm"
                         onClick={() => downloadTranscript("srt")}
                       >
-                        <Download className="mr-2 h-4 w-4" />
-                        .SRT
+                        {" "}
+                        <Download className="mr-2 h-4 w-4" /> .SRT{" "}
                       </Button>
                       <Button
                         variant="outline"
                         size="sm"
                         onClick={() => downloadTranscript("json")}
                       >
-                        <Download className="mr-2 h-4 w-4" />
-                        .JSON
+                        {" "}
+                        <Download className="mr-2 h-4 w-4" /> .JSON{" "}
                       </Button>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="flex gap-2"
-                          >
-                            <Copy className="h-4 w-4" />
-                            Copy
+                          <Button variant="outline" size="sm">
+                            <Download className="mr-2 h-4 w-4" />
+                            .VTT
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="start">
                           <DropdownMenuItem
-                            onClick={() => handleCopy("withTimestamp")}
+                            onClick={() => downloadTranscript("vtt-clean")}
                           >
-                            Copy with timestamp
+                            Cleaned VTT
                           </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleCopy("plain")}>
-                            Copy without timestamp
+                          <DropdownMenuItem
+                            onClick={() => downloadTranscript("vtt-advanced")}
+                          >
+                            Advanced VTT
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => downloadTranscript("csv")}
+                      >
+                        <Download className="mr-2 h-4 w-4" />
+                        .CSV
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => downloadTranscript("md")}
+                      >
+                        <Download className="mr-2 h-4 w-4" />
+                        .MD
+                      </Button>
                     </>
                   ) : (
                     <>
@@ -515,8 +674,11 @@ export default function Dashboard() {
                     </span>
                   )}
                 </div>
-                <TabsContent value="plain" className="mt-4">
-                  <div className="space-y-4 max-h-96 overflow-y-auto">
+                <TabsContent
+                  value="plain"
+                  className="absolute inset-0 flex flex-col min-h-0 pt-[4.5rem]"
+                >
+                  <div className="flex-1 min-h-0 overflow-y-auto space-y-4 p-4">
                     {transcriptData.transcriptBlocks.map((block, idx) => (
                       <div
                         key={idx}
@@ -532,11 +694,78 @@ export default function Dashboard() {
                     ))}
                   </div>
                 </TabsContent>
-                <TabsContent value="summary" className="mt-4">
-                  <div className="bg-muted/30 rounded-lg p-4">
-                    <p className="text-sm leading-relaxed whitespace-pre-line">
-                      {transcriptData.summary}
-                    </p>
+                <TabsContent
+                  value="summary"
+                  className="absolute inset-0 flex flex-col min-h-0 pt-[4.5rem]"
+                >
+                  <div className="flex flex-col flex-1 min-h-0 bg-muted/30 rounded-lg p-2 border border-muted-foreground/10 shadow-sm mt-4">
+                    <div className="flex-1 overflow-y-auto px-2 py-1 space-y-2 min-h-0">
+                      {chatMessages.length === 0 && transcriptData?.title && (
+                        <div className="mb-2 px-4 py-2 rounded-lg bg-white/80 text-primary font-medium text-sm shadow border border-primary/10 w-1/3 mx-auto text-center">
+                          <span role="img" aria-label="video">
+                            🎬
+                          </span>{" "}
+                          Ready to dive into <b>{transcriptData.title}</b>? Use{" "}
+                          <b>Ask</b> to learn key insights and <b>Create</b> to
+                          brainstorm CRAZY Ideas relevant to this video, or you
+                          can chat freely to explore anything!
+                        </div>
+                      )}
+                      {chatMessages.map((msg, idx) => (
+                        <div
+                          key={idx}
+                          className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
+                        >
+                          <div
+                            className={`rounded-lg px-3 py-2 max-w-[80%] text-sm whitespace-pre-line shadow-sm
+                              ${
+                                msg.role === "user"
+                                  ? "bg-primary text-primary-foreground"
+                                  : "bg-background border border-muted-foreground/10"
+                              }
+                            `}
+                          >
+                            {msg.content}
+                          </div>
+                        </div>
+                      ))}
+                      <div ref={chatEndRef} />
+                    </div>
+                    {/* Input box */}
+                    <form
+                      onSubmit={handleSendChat}
+                      className="flex items-center gap-2 px-2 py-2 bg-background rounded-xl shadow border mt-2"
+                    >
+                      <input
+                        type="text"
+                        className="flex-1 px-5 py-2 rounded-full bg-background border-none focus:outline-none text-base placeholder:text-muted-foreground"
+                        placeholder="Ask anything about this video..."
+                        value={chatInput}
+                        onChange={(e) => setChatInput(e.target.value)}
+                        autoComplete="off"
+                        disabled={false}
+                      />
+                      <button
+                        type="submit"
+                        disabled={!chatInput.trim()}
+                        className="ml-2 rounded-full bg-primary/10 hover:bg-primary/20 p-3 transition-colors"
+                      >
+                        <Send className="h-5 w-5 text-primary" />
+                      </button>
+                    </form>
+                    <div className="text-xs text-muted-foreground mt-2 flex items-center gap-1">
+                      <span role="img" aria-label="lightbulb">
+                        💡
+                      </span>
+                      You can reference specific timestamps like this:{" "}
+                      <span className="bg-primary/10 text-primary px-1 rounded">
+                        @01:23
+                      </span>{" "}
+                      or{" "}
+                      <span className="bg-primary/10 text-primary px-1 rounded">
+                        @01:23:45
+                      </span>
+                    </div>
                   </div>
                 </TabsContent>
               </Tabs>
