@@ -56,6 +56,12 @@ export default function DashboardNavbar() {
           >
             Projects
           </Link>
+          <Link
+            href="/donate"
+            className="text-sm font-medium text-gray-700 hover:text-gray-900"
+          >
+            Donate
+          </Link>
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>

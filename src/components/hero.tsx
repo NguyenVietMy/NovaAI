@@ -39,12 +39,13 @@ export default function Hero() {
                 Explore All Tools
                 <Download className="ml-2 w-5 h-5" />
               </Link>
-
               <Link
                 href="#pricing"
-                className="inline-flex items-center px-8 py-4 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors text-lg font-medium"
+                className="inline-flex items-center px-8 py-4 text-gray-400 bg-gray-200 rounded-lg text-lg font-medium cursor-not-allowed pointer-events-none"
               >
                 View Pricing
+                <br></br>
+                (not currently supported)
               </Link>
             </div>
 

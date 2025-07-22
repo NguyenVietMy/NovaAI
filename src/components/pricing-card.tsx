@@ -38,7 +38,7 @@ export default function PricingCard({
           headers: {
             "X-Customer-Email": user.email || "",
           },
-        },
+        }
       );
 
       if (error) {
@@ -81,9 +81,9 @@ export default function PricingCard({
       </CardHeader>
       <CardFooter className="relative">
         <Button
-          onClick={async () => {
-            await handleCheckout(item.id);
-          }}
+          // onClick={async () => {
+          //   await handleCheckout(item.id);
+          // }}
           className={`w-full py-6 text-lg font-medium ${item.popular ? "bg-red-600 hover:bg-red-700" : ""}`}
         >
           Get Started

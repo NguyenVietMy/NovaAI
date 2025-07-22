@@ -54,3 +54,5 @@ supabase/.temp/
 .cursor/
 # Ignore debug screenshots
 *.png
+
+DonateMe_momo.png

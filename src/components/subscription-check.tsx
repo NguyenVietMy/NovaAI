@@ -23,7 +23,7 @@ export async function SubscriptionCheck({
   const isSubscribed = await checkUserSubscription(user?.id!);
 
   if (!isSubscribed) {
-    redirect(redirectTo);
+    // redirect(redirectTo); // Disabled payment redirect
   }
 
   return <>{children}</>;

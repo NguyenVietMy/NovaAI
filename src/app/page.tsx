@@ -202,7 +202,7 @@ export default async function Home() {
       </section>
 
       {/* Pricing Section */}
-      <section className="py-24 bg-white" id="pricing">
+      {/* <section className="py-24 bg-white" id="pricing">
         <div className="container mx-auto px-4">
           <div className="text-center mb-16">
             <h2 className="text-3xl font-bold mb-4">
@@ -219,7 +219,7 @@ export default async function Home() {
             ))}
           </div>
         </div>
-      </section>
+      </section> */}
 
       {/* CTA Section */}
       <section className="py-20 bg-gray-50">
