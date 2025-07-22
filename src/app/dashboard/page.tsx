@@ -91,6 +91,21 @@ function normalizeChannelUrl(url: string): string {
   }
 }
 
+// Utility to check if a URL is a YouTube video
+function isYouTubeVideoUrl(url: string): boolean {
+  try {
+    const u = new URL(url);
+    // Match /watch?v= or /shorts/ or /embed/
+    return (
+      (u.pathname === "/watch" && u.searchParams.has("v")) ||
+      u.pathname.startsWith("/shorts/") ||
+      u.pathname.startsWith("/embed/")
+    );
+  } catch {
+    return false;
+  }
+}
+
 export default function Dashboard() {
   const [user, setUser] = useState<any>(null);
   const [subscription, setSubscription] = useState<SubscriptionData | null>(
@@ -134,6 +149,28 @@ export default function Dashboard() {
   const [channelVideos, setChannelVideos] = useState<ChannelVideo[]>([]);
   const [selectedVideos, setSelectedVideos] = useState<string[]>([]);
 
+  // Update state for pageSize to allow string 'all'
+  const [pageSize, setPageSize] = useState<number | "all">(10);
+  const [currentPage, setCurrentPage] = useState(1);
+
+  // Compute paginated videos
+  const totalPages =
+    pageSize === "all"
+      ? 1
+      : Math.ceil(channelVideos.length / (pageSize as number));
+  const paginatedVideos =
+    pageSize === "all"
+      ? channelVideos
+      : channelVideos.slice(
+          (currentPage - 1) * (pageSize as number),
+          currentPage * (pageSize as number)
+        );
+
+  // Reset to page 1 when channelVideos or pageSize changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [channelVideos, pageSize]);
+
   useEffect(() => {
     const fetchUserData = async () => {
       const supabase = createClient();
@@ -162,6 +199,14 @@ export default function Dashboard() {
     setChannelVideos([]);
     setSelectedVideos([]);
 
+    if (videoType === "channel" && isYouTubeVideoUrl(url)) {
+      setError(
+        "Please enter a valid channel or playlist URL, not a single video URL."
+      );
+      setIsLoading(false);
+      return;
+    }
+
     try {
       if (videoType === "channel") {
         const fixedUrl = normalizeChannelUrl(url);
@@ -170,7 +215,16 @@ export default function Dashboard() {
           setChannelVideos(result.videos);
           setSuccess(`Fetched ${result.count} videos!`);
         } else {
-          setError(result.error);
+          let errMsg = result.error;
+          if (
+            /yt-dlp|Failed to resolve|TransportError|download webpage|Traceback|HTTPSConnection|getaddrinfo/i.test(
+              errMsg
+            )
+          ) {
+            errMsg =
+              "Invalid or unreachable URL. Please check your input and try again.";
+          }
+          setError(errMsg);
         }
       } else {
         const formData = new FormData();
@@ -920,6 +974,21 @@ export default function Dashboard() {
         {/* Video/Shorts Table */}
         {videoType === "channel" && channelVideos.length > 0 && (
           <div className="overflow-x-auto mt-6">
+            {/* Page size selector */}
+            <div className="mb-2 flex items-center gap-2">
+              <span className="text-sm">Rows per page:</span>
+              {[10, 50, 100, "All"].map((size) => (
+                <button
+                  key={size}
+                  className={`px-2 py-1 rounded border text-sm ${pageSize === size || (size === "All" && pageSize === "all") ? "bg-blue-600 text-white" : "bg-white text-blue-600 border-blue-600"}`}
+                  onClick={() =>
+                    setPageSize(size === "All" ? "all" : Number(size))
+                  }
+                >
+                  {size}
+                </button>
+              ))}
+            </div>
             <table className="min-w-full bg-white border rounded-lg shadow">
               <thead>
                 <tr className="bg-gray-100 text-left">
@@ -940,7 +1009,7 @@ export default function Dashboard() {
                 </tr>
               </thead>
               <tbody>
-                {channelVideos.map((video) => {
+                {paginatedVideos.map((video) => {
                   const isShort = video.url.includes("/shorts/");
                   return (
                     <tr key={video.id} className="border-t hover:bg-gray-50">
@@ -983,6 +1052,30 @@ export default function Dashboard() {
                 })}
               </tbody>
             </table>
+            {/* Pagination controls */}
+            {pageSize !== "all" && (
+              <div className="flex items-center justify-between mt-2">
+                <button
+                  className="px-3 py-1 rounded border text-sm bg-white text-blue-600 border-blue-600 disabled:opacity-50"
+                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                >
+                  Prev
+                </button>
+                <span className="text-sm">
+                  Page {currentPage} of {totalPages}
+                </span>
+                <button
+                  className="px-3 py-1 rounded border text-sm bg-white text-blue-600 border-blue-600 disabled:opacity-50"
+                  onClick={() =>
+                    setCurrentPage((p) => Math.min(totalPages, p + 1))
+                  }
+                  disabled={currentPage === totalPages}
+                >
+                  Next
+                </button>
+              </div>
+            )}
           </div>
         )}
       </main>
