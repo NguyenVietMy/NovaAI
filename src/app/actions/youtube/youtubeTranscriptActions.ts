@@ -414,11 +414,26 @@ export async function fetchChannelVideos(
         try {
           const raw: YtDlpChannelDump = JSON.parse(stdout);
 
-          const videos: ChannelVideo[] = (raw.entries || []).map((e) => ({
-            id: e.id,
-            title: e.title || "",
-            url: e.url || `https://www.youtube.com/watch?v=${e.id}`,
-          }));
+          const videos: ChannelVideo[] = (raw.entries || []).map((e) => {
+            let thumbnailUrl = "";
+            if (
+              e.thumbnails &&
+              Array.isArray(e.thumbnails) &&
+              e.thumbnails.length > 0
+            ) {
+              thumbnailUrl =
+                e.thumbnails[e.thumbnails.length - 1].url ||
+                e.thumbnails[0].url;
+            } else if (e.thumbnail) {
+              thumbnailUrl = e.thumbnail;
+            }
+            return {
+              id: e.id,
+              title: e.title || "",
+              url: e.url || `https://www.youtube.com/watch?v=${e.id}`,
+              thumbnailUrl,
+            };
+          });
 
           console.log("fetchChannelVideos result:", {
             raw,

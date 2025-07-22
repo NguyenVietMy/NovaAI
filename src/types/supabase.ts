@@ -361,6 +361,7 @@ export type ChannelVideo = {
   id: string;
   title: string;
   url: string;
+  thumbnailUrl?: string;
 };
 
 export type FetchChannelVideosResult =

@@ -1003,6 +1003,7 @@ export default function Dashboard() {
                       }
                     />
                   </th>
+                  <th className="p-3">Thumbnail</th>
                   <th className="p-3">Title</th>
                   <th className="p-3">Type</th>
                   <th className="p-3">YouTube Link</th>
@@ -1027,14 +1028,29 @@ export default function Dashboard() {
                           }}
                         />
                       </td>
+                      <td className="p-3">
+                        <div className="w-20 aspect-video bg-gray-100 rounded overflow-hidden flex items-center justify-center">
+                          {video.thumbnailUrl ? (
+                            <img
+                              src={video.thumbnailUrl}
+                              alt="thumbnail"
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center text-gray-400 text-xs">
+                              N/A
+                            </div>
+                          )}
+                        </div>
+                      </td>
                       <td className="p-3 font-medium text-gray-900">
                         {video.title}
                       </td>
                       <td className="p-3">
                         <span
-                          className={`px-2 py-1 rounded text-xs font-semibold ${isShort ? "bg-yellow-100 text-yellow-800" : "bg-blue-100 text-blue-800"}`}
+                          className={`px-2 py-1 rounded text-xs font-semibold ${isShort ? "bg-yellow-300 text-yellow-800" : "bg-red-600 text-white"}`}
                         >
-                          {isShort ? "Short" : "Video"}
+                          {isShort ? "Shorts" : "Videos"}
                         </span>
                       </td>
                       <td className="p-3">
