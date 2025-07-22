@@ -17,7 +17,10 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getUserSubscriptionDetails } from "../actions/auth_actions/authActions";
-import { processYouTubeTranscript } from "../actions/youtube/youtubeTranscriptActions";
+import {
+  processYouTubeTranscript,
+  fetchChannelVideos,
+} from "../actions/youtube/youtubeTranscriptActions";
 import { createClient } from "../../../supabase/client";
 import type { TimedBlock } from "../actions/youtube/youtubeTranscriptActions";
 import {
@@ -33,6 +36,8 @@ import {
   Clock,
   Copy,
   Send,
+  Video,
+  List,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -41,6 +46,7 @@ import {
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
 import { useRef } from "react";
+import type { ChannelVideo } from "@/types/supabase";
 
 interface TranscriptData {
   url: string;
@@ -64,6 +70,27 @@ interface SubscriptionData {
   created_at: string;
 }
 
+// Utility to normalize YouTube channel URLs to the /videos tab
+function normalizeChannelUrl(url: string): string {
+  try {
+    const u = new URL(url);
+    // Handles /@handle, /@handle/featured, /@handle/shorts, /@handle/videos, etc.
+    const match = u.pathname.match(/^\/@[\w\-]+/);
+    if (match) {
+      return `${u.origin}${match[0]}/videos`;
+    }
+    // Handles /channel/UCxxxxxx
+    const channelMatch = u.pathname.match(/^\/channel\/[\w\-]+/);
+    if (channelMatch) {
+      return `${u.origin}${channelMatch[0]}/videos`;
+    }
+    // Fallback: return original
+    return url;
+  } catch {
+    return url;
+  }
+}
+
 export default function Dashboard() {
   const [user, setUser] = useState<any>(null);
   const [subscription, setSubscription] = useState<SubscriptionData | null>(
@@ -79,6 +106,8 @@ export default function Dashboard() {
   const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [copyStatus, setCopyStatus] = useState<string>("");
   const [activeTab, setActiveTab] = useState("plain");
+  const [videoType, setVideoType] = useState<"single" | "channel">("single");
+  const [fetchShorts, setFetchShorts] = useState(false);
 
   // --- AI Chat State ---
   const [chatMessages, setChatMessages] = useState<
@@ -101,6 +130,9 @@ export default function Dashboard() {
     setChatInput("");
     // TODO: Add AI response logic here
   };
+
+  const [channelVideos, setChannelVideos] = useState<ChannelVideo[]>([]);
+  const [selectedVideos, setSelectedVideos] = useState<string[]>([]);
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -127,24 +159,43 @@ export default function Dashboard() {
     setError("");
     setSuccess("");
     setTranscriptData(null);
+    setChannelVideos([]);
+    setSelectedVideos([]);
 
     try {
-      const formData = new FormData();
-      formData.append("url", url);
-
-      const result = await processYouTubeTranscript(formData);
-      if (result?.data) {
-        setTranscriptData(result.data as TranscriptData);
-        setSuccess("Transcript generated successfully!");
-      } else if (result?.error) {
-        setError(result.error);
+      if (videoType === "channel") {
+        const fixedUrl = normalizeChannelUrl(url);
+        const result = await fetchChannelVideos(fixedUrl, true, fetchShorts);
+        if (result.success) {
+          setChannelVideos(result.videos);
+          setSuccess(`Fetched ${result.count} videos!`);
+        } else {
+          setError(result.error);
+        }
+      } else {
+        const formData = new FormData();
+        formData.append("url", url);
+        const result = await processYouTubeTranscript(formData);
+        if (result?.data) {
+          setTranscriptData(result.data as TranscriptData);
+          setSuccess("Transcript generated successfully!");
+        } else if (result?.error) {
+          setError(result.error);
+        }
       }
     } catch (err) {
-      setError("Failed to process video. Please try again.");
+      setError("Failed to process. Please try again.");
     } finally {
       setIsLoading(false);
     }
   };
+
+  // Clear data when switching modes
+  useEffect(() => {
+    setTranscriptData(null);
+    setChannelVideos([]);
+    setSelectedVideos([]);
+  }, [videoType]);
 
   const downloadTranscript = (
     format:
@@ -393,15 +444,107 @@ export default function Dashboard() {
 
         {/* Main Content Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-stretch">
+          {/* Video Type Toggle */}
+          <div className="lg:col-span-2 flex justify-center mb-4">
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-1 flex items-center">
+              <button
+                onClick={() => setVideoType("single")}
+                className={`flex items-center gap-2 px-4 py-2 rounded-md transition-all ${
+                  videoType === "single"
+                    ? "bg-red-600 text-white"
+                    : "text-gray-600 hover:text-gray-900"
+                }`}
+              >
+                <Video className="w-4 h-4" />
+                <span className="font-medium">Single Video</span>
+              </button>
+              <div className="relative">
+                <button
+                  onClick={() => setVideoType("channel")}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-md transition-all ${
+                    videoType === "channel"
+                      ? "bg-red-600 text-white"
+                      : "text-gray-600 hover:text-gray-900"
+                  }`}
+                >
+                  <List className="w-4 h-4" />
+                  <span className="font-medium">Channel/Playlist</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
           {/* YouTube URL Input Form */}
-          <Card className="flex flex-col h-full">
+          <Card className="flex flex-col h-full relative">
+            {videoType === "channel" && (
+              <div className="absolute right-4 top-4 z-10 flex items-center gap-2">
+                <span className="text-sm font-medium">Include shorts?</span>
+                <button
+                  type="button"
+                  aria-pressed={fetchShorts}
+                  onClick={() => setFetchShorts((v) => !v)}
+                  className={`w-14 h-8 flex items-center rounded-full transition-colors duration-200 focus:outline-none border-2 border-green-700 ${
+                    fetchShorts ? "bg-green-700" : "bg-gray-200"
+                  }`}
+                >
+                  <span
+                    className={`w-7 h-7 flex items-center justify-center rounded-full bg-white shadow transform transition-transform duration-200 ${
+                      fetchShorts ? "translate-x-6" : "translate-x-0"
+                    }`}
+                  >
+                    {fetchShorts ? (
+                      <svg
+                        width="20"
+                        height="20"
+                        viewBox="0 0 20 20"
+                        fill="none"
+                      >
+                        <path
+                          d="M5 10.5l4 4 6-8"
+                          stroke="#166534"
+                          strokeWidth="2.2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      </svg>
+                    ) : (
+                      <svg
+                        width="20"
+                        height="20"
+                        viewBox="0 0 20 20"
+                        fill="none"
+                      >
+                        <path
+                          d="M6 6l8 8M14 6l-8 8"
+                          stroke="#64748b"
+                          strokeWidth="2.2"
+                          strokeLinecap="round"
+                        />
+                      </svg>
+                    )}
+                  </span>
+                </button>
+              </div>
+            )}
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <FileText className="h-5 w-5" />
-                Generate Transcript
+                {videoType === "single" ? (
+                  "Generate Transcript"
+                ) : (
+                  <>
+                    Get <span className="gradient-red-text">YouTube</span>{" "}
+                    Videos{" "}
+                    <span className="bg-indigo-500 text-white px-2 py-1 text-xs font-bold rounded">
+                      PRO
+                    </span>
+                  </>
+                )}
               </CardTitle>
               <CardDescription>
-                Enter a YouTube URL to generate transcript and AI summary
+                {videoType === "single"
+                  ? "Enter a YouTube URL to generate transcript and AI summary"
+                  : "Enter a valid channel URL or a public playlist to get all videos for transcript generation"}
               </CardDescription>
             </CardHeader>
             <CardContent className="flex-1 flex flex-col justify-between">
@@ -430,7 +573,9 @@ export default function Dashboard() {
                   ) : (
                     <>
                       <Play className="mr-2 h-4 w-4" />
-                      Generate Transcript
+                      {videoType === "single"
+                        ? "Generate Transcript"
+                        : "Get Videos"}
                     </>
                   )}
                 </Button>
@@ -771,6 +916,74 @@ export default function Dashboard() {
               </Tabs>
             </CardContent>
           </Card>
+        )}
+        {/* Video/Shorts Table */}
+        {videoType === "channel" && channelVideos.length > 0 && (
+          <div className="overflow-x-auto mt-6">
+            <table className="min-w-full bg-white border rounded-lg shadow">
+              <thead>
+                <tr className="bg-gray-100 text-left">
+                  <th className="p-3">
+                    <input
+                      type="checkbox"
+                      checked={selectedVideos.length === channelVideos.length}
+                      onChange={(e) =>
+                        setSelectedVideos(
+                          e.target.checked ? channelVideos.map((v) => v.id) : []
+                        )
+                      }
+                    />
+                  </th>
+                  <th className="p-3">Title</th>
+                  <th className="p-3">Type</th>
+                  <th className="p-3">YouTube Link</th>
+                </tr>
+              </thead>
+              <tbody>
+                {channelVideos.map((video) => {
+                  const isShort = video.url.includes("/shorts/");
+                  return (
+                    <tr key={video.id} className="border-t hover:bg-gray-50">
+                      <td className="p-3">
+                        <input
+                          type="checkbox"
+                          checked={selectedVideos.includes(video.id)}
+                          onChange={(e) => {
+                            if (e.target.checked)
+                              setSelectedVideos([...selectedVideos, video.id]);
+                            else
+                              setSelectedVideos(
+                                selectedVideos.filter((id) => id !== video.id)
+                              );
+                          }}
+                        />
+                      </td>
+                      <td className="p-3 font-medium text-gray-900">
+                        {video.title}
+                      </td>
+                      <td className="p-3">
+                        <span
+                          className={`px-2 py-1 rounded text-xs font-semibold ${isShort ? "bg-yellow-100 text-yellow-800" : "bg-blue-100 text-blue-800"}`}
+                        >
+                          {isShort ? "Short" : "Video"}
+                        </span>
+                      </td>
+                      <td className="p-3">
+                        <a
+                          href={video.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-blue-600 underline"
+                        >
+                          YouTube
+                        </a>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         )}
       </main>
     </div>

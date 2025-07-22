@@ -335,3 +335,42 @@ export interface Item {
   data: any;
   created_at: string;
 }
+
+export type YtDlpPlaylistEntry = {
+  _type?: string;
+  id: string;
+  title?: string;
+  url?: string;
+  ie_key?: string;
+  channel?: string;
+  channel_id?: string;
+  [k: string]: any;
+};
+
+export type YtDlpChannelDump = {
+  _type: "playlist";
+  id?: string;
+  title?: string;
+  uploader?: string;
+  webpage_url: string;
+  entries: YtDlpPlaylistEntry[];
+  [k: string]: any;
+};
+
+export type ChannelVideo = {
+  id: string;
+  title: string;
+  url: string;
+};
+
+export type FetchChannelVideosResult =
+  | {
+      success: true;
+      raw: YtDlpChannelDump; // exactly what yt-dlp returned
+      videos: ChannelVideo[]; // simple normalized array
+      count: number;
+    }
+  | {
+      success: false;
+      error: string;
+    };

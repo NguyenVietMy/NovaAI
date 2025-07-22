@@ -6,6 +6,11 @@ import { tmpdir } from "os";
 import OpenAI from "openai";
 import { supabase } from "../../../../supabase/supabase";
 import { createClient as createServerClient } from "../../../../supabase/server";
+import {
+  ChannelVideo,
+  FetchChannelVideosResult,
+  YtDlpChannelDump,
+} from "../../../types/supabase";
 
 // --- YOUTUBE HELPER FUNCTIONS ---
 
@@ -362,3 +367,118 @@ export const processYouTubeTranscript = async (formData: FormData) => {
     return { error: `Failed to fetch transcript: ${err.message}` };
   }
 };
+
+const YTDLP_PATH = "./yt-dlp.exe";
+
+/**
+ * Fetch every video in a YouTube channel (or any playlist-like URL) as JSON.
+ *
+ * @param channelUrl e.g. "https://www.youtube.com/@veritasium/videos"
+ * @param flat       keep it flat (faster, fewer fields). If false, yt-dlp will resolve each entry fully.
+ * @returns FetchChannelVideosResult
+ */
+export async function fetchChannelVideos(
+  channelUrl: string,
+  flat: boolean = true,
+  fetchShorts: boolean = false
+): Promise<FetchChannelVideosResult> {
+  if (!channelUrl) {
+    return { success: false, error: "channelUrl is required" };
+  }
+
+  // Helper to fetch a single tab
+  async function fetchTab(tabUrl: string) {
+    return new Promise<FetchChannelVideosResult>((resolve) => {
+      const args = [
+        flat ? "--flat-playlist" : "",
+        "-J", // dump single json
+        tabUrl,
+      ].filter(Boolean);
+
+      const proc = spawn(YTDLP_PATH, args);
+
+      let stdout = "";
+      let stderr = "";
+
+      proc.stdout.on("data", (d) => (stdout += d.toString()));
+      proc.stderr.on("data", (d) => (stderr += d.toString()));
+
+      proc.on("close", (code) => {
+        if (code !== 0) {
+          console.log("fetchChannelVideos error:", { code, stderr });
+          return resolve({
+            success: false,
+            error: `yt-dlp exited with code ${code}. ${stderr || ""}`,
+          });
+        }
+        try {
+          const raw: YtDlpChannelDump = JSON.parse(stdout);
+
+          const videos: ChannelVideo[] = (raw.entries || []).map((e) => ({
+            id: e.id,
+            title: e.title || "",
+            url: e.url || `https://www.youtube.com/watch?v=${e.id}`,
+          }));
+
+          console.log("fetchChannelVideos result:", {
+            raw,
+            videos,
+            count: videos.length,
+          });
+
+          resolve({
+            success: true,
+            raw,
+            videos,
+            count: videos.length,
+          });
+        } catch (e: any) {
+          console.log("fetchChannelVideos parse error:", e);
+          resolve({
+            success: false,
+            error: `Failed to parse yt-dlp JSON: ${e?.message || e}`,
+          });
+        }
+      });
+    });
+  }
+
+  // Always fetch /videos
+  const videosUrl =
+    channelUrl.replace(/\/shorts$|\/featured$|\/videos$|\/home$/i, "") +
+    "/videos";
+  const videosResult = await fetchTab(videosUrl);
+
+  if (!fetchShorts) return videosResult;
+
+  // If fetchShorts is true, also fetch /shorts and merge
+  const shortsUrl =
+    channelUrl.replace(/\/shorts$|\/featured$|\/videos$|\/home$/i, "") +
+    "/shorts";
+  const shortsResult = await fetchTab(shortsUrl);
+
+  if (!videosResult.success && !shortsResult.success) {
+    return {
+      success: false,
+      error: [videosResult.error, shortsResult.error]
+        .filter(Boolean)
+        .join("; "),
+    };
+  }
+  // At least one is successful, so raw will always be defined
+  let raw;
+  if (videosResult.success) raw = videosResult.raw;
+  else if (shortsResult.success) raw = shortsResult.raw;
+  else raw = undefined; // Should never happen due to guard above
+
+  const allVideos = [
+    ...(videosResult.success ? videosResult.videos : []),
+    ...(shortsResult.success ? shortsResult.videos : []),
+  ];
+  return {
+    success: true,
+    raw: raw as YtDlpChannelDump,
+    videos: allVideos,
+    count: allVideos.length,
+  };
+}
