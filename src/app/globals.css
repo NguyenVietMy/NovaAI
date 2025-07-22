@@ -67,3 +67,71 @@
     @apply bg-background text-foreground;
   }
 }
+
+@layer components {
+  .gradient-green-text {
+    background: linear-gradient(
+      90deg,
+      #00aa44,
+      #008833,
+      #00cc55,
+      #006622,
+      #00dd66,
+      #00aa44,
+      #008833,
+      #00cc55
+    );
+    background-size: 300% 300%;
+    background-clip: text;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    animation: gradient-green-shift 2.5s linear infinite;
+    font-weight: bold;
+    letter-spacing: 0.5px;
+  }
+
+  @keyframes gradient-green-shift {
+    0% {
+      background-position: 0% 50%;
+    }
+    50% {
+      background-position: 100% 50%;
+    }
+    100% {
+      background-position: 0% 50%;
+    }
+  }
+
+  .gradient-red-text {
+    background: linear-gradient(
+      90deg,
+      #ff104a,
+      #ff9f8f,
+      #ff2654,
+      #ff546a,
+      #ff8f87,
+      #ff104a,
+      #ff9f8f,
+      #ff2654
+    );
+    background-size: 300% 300%;
+    background-clip: text;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    animation: gradient-red-shift 2.5s linear infinite;
+    font-weight: bold;
+    letter-spacing: 0.5px;
+  }
+
+  @keyframes gradient-red-shift {
+    0% {
+      background-position: 0% 50%;
+    }
+    50% {
+      background-position: 100% 50%;
+    }
+    100% {
+      background-position: 0% 50%;
+    }
+  }
+}

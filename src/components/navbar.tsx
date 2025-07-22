@@ -18,48 +18,48 @@ export default async function Navbar() {
   } = await (await supabase).auth.getUser();
 
   return (
-    <nav className="w-full border-b border-gray-200 bg-white py-3 sticky top-0 z-50 backdrop-blur-sm bg-white/95">
-      <div className="container mx-auto px-4 flex justify-between items-center">
+    <nav className="w-full border-b border-gray-200 bg-white py-6 sticky top-0 z-50 backdrop-blur-sm bg-white/95">
+      <div className="container mx-auto px-6 flex justify-between items-center">
         <Link
           href="/"
           prefetch
-          className="flex items-center gap-2 text-xl font-bold text-gray-900"
+          className="flex items-center gap-3 text-2xl font-bold text-gray-900"
         >
-          <div className="w-8 h-8 bg-red-600 rounded-lg flex items-center justify-center">
-            <FileText className="w-5 h-5 text-white" />
+          <div className="w-12 h-12 bg-red-600 rounded-xl flex items-center justify-center">
+            <FileText className="w-7 h-7 text-white" />
           </div>
           <span>
             NovaAI{" "}
-            <span className="text-xs font-normal text-gray-500">
+            <span className="text-sm font-normal text-gray-500">
               YouTube Assistant
             </span>
           </span>
         </Link>
-        <div className="flex gap-6 items-center">
+        <div className="flex gap-8 items-center">
+          <Link
+            href="/donate"
+            className="text-base font-semibold gradient-green-text hover:opacity-80 transition-opacity"
+          >
+            Donate
+          </Link>
           <Link
             href="/tools"
-            className="text-sm font-medium text-gray-700 hover:text-gray-900"
+            className="text-base font-semibold text-gray-700 hover:text-gray-900"
           >
             Tools
           </Link>
           <Link
             href="/projects"
-            className="text-sm font-medium text-gray-700 hover:text-gray-900"
+            className="text-base font-semibold text-gray-700 hover:text-gray-900"
           >
             Projects
-          </Link>
-          <Link
-            href="/donate"
-            className="text-sm font-medium text-gray-700 hover:text-gray-900"
-          >
-            Donate
           </Link>
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
                 <Link
                   href="/ideas-brainstormer"
-                  className="text-sm font-medium text-gray-700 hover:text-gray-900"
+                  className="text-base font-semibold text-gray-700 hover:text-gray-900"
                 >
                   Script Generator
                 </Link>
@@ -72,7 +72,7 @@ export default async function Navbar() {
               <TooltipTrigger asChild>
                 <Link
                   href="/video-outliner"
-                  className="text-sm font-medium text-gray-700 hover:text-gray-900"
+                  className="text-base font-semibold text-gray-700 hover:text-gray-900"
                 >
                   Video Outliner
                 </Link>
@@ -85,7 +85,7 @@ export default async function Navbar() {
               <TooltipTrigger asChild>
                 <Link
                   href="/dashboard"
-                  className="text-sm font-medium text-gray-700 hover:text-gray-900"
+                  className="text-base font-semibold text-gray-700 hover:text-gray-900"
                 >
                   YouTube Transcript
                 </Link>
@@ -98,7 +98,7 @@ export default async function Navbar() {
               <TooltipTrigger asChild>
                 <Link
                   href="/history"
-                  className="text-sm font-medium text-gray-700 hover:text-gray-900"
+                  className="text-base font-semibold text-gray-700 hover:text-gray-900"
                 >
                   History
                 </Link>
@@ -114,13 +114,13 @@ export default async function Navbar() {
             <>
               <Link
                 href="/sign-in"
-                className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900"
+                className="px-6 py-3 text-base font-semibold text-gray-700 hover:text-gray-900"
               >
                 Sign In
               </Link>
               <Link
                 href="/sign-up"
-                className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700 transition-colors"
+                className="px-6 py-3 text-base font-semibold text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors"
               >
                 Sign Up
               </Link>
