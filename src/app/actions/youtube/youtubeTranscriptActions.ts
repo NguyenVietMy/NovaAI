@@ -211,7 +211,7 @@ const summarizeTranscript = async (text: string): Promise<string> => {
     );
   } catch (err) {
     console.error("AI summary error:", JSON.stringify(err, null, 2));
-    return "Failed to generate summary.";
+    return "Server error, failed to initialize AI chat";
   }
 };
 
