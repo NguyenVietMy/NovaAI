@@ -989,10 +989,11 @@ export default function Dashboard() {
                 </button>
               ))}
             </div>
-            <table className="min-w-full bg-white border rounded-lg shadow">
+            <table className="w-full bg-white border rounded-lg shadow table-auto border-collapse">
               <thead>
-                <tr className="bg-gray-100 text-left">
-                  <th className="p-3">
+                <tr className="bg-gray-100">
+                  {/* checkbox (unchanged) */}
+                  <th className="w-6 px-1 py-2 text-center pl-[22px]">
                     <input
                       type="checkbox"
                       checked={selectedVideos.length === channelVideos.length}
@@ -1003,18 +1004,29 @@ export default function Dashboard() {
                       }
                     />
                   </th>
-                  <th className="p-3">Thumbnail</th>
-                  <th className="p-3">Title</th>
-                  <th className="p-3">Type</th>
-                  <th className="p-3">YouTube Link</th>
+
+                  {/* thumbnail header: add left padding ~10px */}
+                  <th className="py-2 pl-[30px] pr-1 w-[90px] min-w-[90px] max-w-[90px] text-center">
+                    Thumbnail
+                  </th>
+
+                  <th className="px-2 py-2 text-left pl-[39px] w-2/3">Title</th>
+                  <th className="px-2 py-2 w-1/6 text-center">Placeholder</th>
+                  <th className="px-2 py-2 w-1/6 text-center">Placeholder 2</th>
+                  <th className="px-2 py-2 w-16 text-center pr-[30px]">Type</th>
+                  <th className="px-2 py-2 w-20 text-center pr-[35px]">
+                    YouTube Link
+                  </th>
                 </tr>
               </thead>
+
               <tbody>
                 {paginatedVideos.map((video) => {
                   const isShort = video.url.includes("/shorts/");
                   return (
                     <tr key={video.id} className="border-t hover:bg-gray-50">
-                      <td className="p-3">
+                      {/* checkbox */}
+                      <td className="px-1 py-2 text-center pl-[22px]">
                         <input
                           type="checkbox"
                           checked={selectedVideos.includes(video.id)}
@@ -1028,8 +1040,10 @@ export default function Dashboard() {
                           }}
                         />
                       </td>
-                      <td className="p-3">
-                        <div className="w-20 aspect-video bg-gray-100 rounded overflow-hidden flex items-center justify-center">
+
+                      {/* thumbnail cell: same 10px padding */}
+                      <td className="py-2 pl-[30px] pr-1 text-center">
+                        <div className="inline-block w-[90px] aspect-video bg-gray-100 rounded overflow-hidden align-middle">
                           {video.thumbnailUrl ? (
                             <img
                               src={video.thumbnailUrl}
@@ -1043,22 +1057,45 @@ export default function Dashboard() {
                           )}
                         </div>
                       </td>
-                      <td className="p-3 font-medium text-gray-900">
-                        {video.title}
+
+                      {/* title */}
+                      <td className="px-2 py-2 font-medium text-gray-900 w-2/3 pl-[39px]">
+                        <div className="break-words whitespace-normal max-w-[600px] overflow-hidden">
+                          {video.title}
+                        </div>
                       </td>
-                      <td className="p-3">
+
+                      {/* centered right columns */}
+                      <td className="px-2 py-2 text-center">
+                        <span className="text-sm text-gray-500">
+                          Placeholder
+                        </span>
+                      </td>
+
+                      <td className="px-2 py-2 text-center">
+                        <span className="text-sm text-gray-500">
+                          Placeholder 2
+                        </span>
+                      </td>
+
+                      <td className="px-2 py-2 text-center pr-[30px]">
                         <span
-                          className={`px-2 py-1 rounded text-xs font-semibold ${isShort ? "bg-yellow-300 text-yellow-800" : "bg-red-600 text-white"}`}
+                          className={`px-2 py-1 rounded text-xs font-semibold inline-block ${
+                            isShort
+                              ? "bg-yellow-300 text-yellow-800"
+                              : "bg-red-600 text-white"
+                          }`}
                         >
                           {isShort ? "Shorts" : "Videos"}
                         </span>
                       </td>
-                      <td className="p-3">
+
+                      <td className="px-2 py-2 text-center pr-[35px]">
                         <a
                           href={video.url}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-blue-600 underline"
+                          className="text-blue-600 underline inline-block"
                         >
                           YouTube
                         </a>
@@ -1068,6 +1105,7 @@ export default function Dashboard() {
                 })}
               </tbody>
             </table>
+
             {/* Pagination controls */}
             {pageSize !== "all" && (
               <div className="flex items-center justify-between mt-2">

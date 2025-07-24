@@ -29,7 +29,7 @@ export default function ToolsOverview() {
           <div className="p-8 bg-white rounded-xl shadow-sm border border-gray-100 flex flex-col h-full items-center">
             <FileText className="w-10 h-10 text-red-600 mb-4" />
             <h2 className="text-xl font-semibold mb-2">
-              Transcript + AI Summary
+              Transcript + AI Assistant
             </h2>
             <p className="text-gray-600 mb-6 text-center flex-1">
               Extract YouTube transcripts and get concise AI-generated summaries
@@ -50,8 +50,8 @@ export default function ToolsOverview() {
             <Zap className="w-10 h-10 text-red-600 mb-4" />
             <h2 className="text-xl font-semibold mb-2">Video Outliner</h2>
             <p className="text-gray-600 mb-6 text-center flex-1">
-              Turn long videos into structured outlines for easier review,
-              study, or content creation. Great for students and creators.
+              Help content creators plan and create outlines with idea
+              suggestions for their next video.
             </p>
             <div className="mt-auto w-full flex justify-center">
               <Link
@@ -67,7 +67,7 @@ export default function ToolsOverview() {
             <Users className="w-10 h-10 text-red-600 mb-4" />
             <h2 className="text-xl font-semibold mb-2">Ideas Brainstormer</h2>
             <p className="text-gray-600 mb-6 text-center flex-1">
-              Generate fresh video ideas and creative prompts tailored to your
+              Generate fresh video ideas with creative aspects tailored to your
               channel or topic. Never run out of inspiration!
             </p>
             <div className="mt-auto w-full flex justify-center">
