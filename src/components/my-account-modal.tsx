@@ -59,7 +59,7 @@ export default function MyAccountModal() {
         </Button>
       </section>
 
-      {/* Analytics */}
+      {/* Analytics*/}
       <section className="mb-8">
         <h2 className="text-lg font-semibold mb-3">Analytics</h2>
         <Button
