@@ -458,7 +458,16 @@ export async function fetchChannelVideos(
     });
   }
 
-  // Always fetch /videos
+  // Check if this is a playlist URL
+  const isPlaylist = channelUrl.includes("/playlist?list=");
+
+  if (isPlaylist) {
+    // For playlists, use the URL as-is
+    const playlistResult = await fetchTab(channelUrl);
+    return playlistResult;
+  }
+
+  // For channels, always fetch /videos
   const videosUrl =
     channelUrl.replace(/\/shorts$|\/featured$|\/videos$|\/home$/i, "") +
     "/videos";

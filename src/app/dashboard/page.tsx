@@ -70,20 +70,28 @@ interface SubscriptionData {
   created_at: string;
 }
 
-// Utility to normalize YouTube channel URLs to the /videos tab
+// Utility to normalize YouTube channel and playlist URLs
 function normalizeChannelUrl(url: string): string {
   try {
     const u = new URL(url);
+
+    // Handle playlist URLs - return as-is since yt-dlp handles them correctly
+    if (u.pathname === "/playlist" && u.searchParams.has("list")) {
+      return url;
+    }
+
     // Handles /@handle, /@handle/featured, /@handle/shorts, /@handle/videos, etc.
     const match = u.pathname.match(/^\/@[\w\-]+/);
     if (match) {
       return `${u.origin}${match[0]}/videos`;
     }
+
     // Handles /channel/UCxxxxxx
     const channelMatch = u.pathname.match(/^\/channel\/[\w\-]+/);
     if (channelMatch) {
       return `${u.origin}${channelMatch[0]}/videos`;
     }
+
     // Fallback: return original
     return url;
   } catch {
@@ -598,7 +606,7 @@ export default function Dashboard() {
               <CardDescription>
                 {videoType === "single"
                   ? "Enter a YouTube URL to generate transcript and AI summary"
-                  : "Enter a valid channel URL or a public playlist to get all videos for transcript generation"}
+                  : "Enter a valid channel URL or a public playlist URL to get all videos for transcript generation"}
               </CardDescription>
             </CardHeader>
             <CardContent className="flex-1 flex flex-col justify-between">
@@ -977,17 +985,43 @@ export default function Dashboard() {
             {/* Page size selector */}
             <div className="mb-2 flex items-center gap-2">
               <span className="text-sm">Rows per page:</span>
-              {[10, 50, 100, "All"].map((size) => (
-                <button
-                  key={size}
-                  className={`px-2 py-1 rounded border text-sm ${pageSize === size || (size === "All" && pageSize === "all") ? "bg-blue-600 text-white" : "bg-white text-blue-600 border-blue-600"}`}
-                  onClick={() =>
-                    setPageSize(size === "All" ? "all" : Number(size))
-                  }
-                >
-                  {size}
-                </button>
-              ))}
+              {(() => {
+                const sizes: (number | string)[] = [10, 50, 100];
+                const showAll = channelVideos.length <= 200;
+
+                if (showAll) {
+                  sizes.push("All");
+                }
+
+                return sizes.map((size) => (
+                  <button
+                    key={size}
+                    className={`px-2 py-1 rounded border text-sm ${
+                      pageSize === size ||
+                      (size === "All" && pageSize === "all")
+                        ? "bg-blue-600 text-white"
+                        : "bg-white text-blue-600 border-blue-600"
+                    }`}
+                    onClick={() => {
+                      if (size === "All" && channelVideos.length > 100) {
+                        const confirmed = window.confirm(
+                          `Warning: You're about to display ${channelVideos.length} videos at once. This may slow down your browser. Continue?`
+                        );
+                        if (!confirmed) return;
+                      }
+                      setPageSize(size === "All" ? "all" : Number(size));
+                    }}
+                  >
+                    {size}
+                  </button>
+                ));
+              })()}
+              {channelVideos.length > 200 && (
+                <span className="text-xs text-orange-600 ml-2">
+                  (Large dataset: {channelVideos.length} videos - Viewing all
+                  videos at once is disabled)
+                </span>
+              )}
             </div>
             <table className="w-full bg-white border rounded-lg shadow table-auto border-collapse">
               <thead>

@@ -4,9 +4,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { BarChart3 } from "lucide-react";
 
 export default function MyAccountModal() {
   const [darkMode, setDarkMode] = useState(false);
+  const router = useRouter();
 
   return (
     <div className="w-full max-w-xl">
@@ -56,23 +59,17 @@ export default function MyAccountModal() {
         </Button>
       </section>
 
-      {/* Usage Stats */}
+      {/* Analytics */}
       <section className="mb-8">
-        <h2 className="text-lg font-semibold mb-3">Usage Stats</h2>
-        <div className="grid grid-cols-1 gap-2 text-gray-700">
-          <div className="flex justify-between">
-            <span>Videos summarized</span>
-            <span className="font-mono">N/A</span>
-          </div>
-          <div className="flex justify-between">
-            <span>Ideas brainstormed</span>
-            <span className="font-mono">N/A</span>
-          </div>
-          <div className="flex justify-between">
-            <span>Outlines generated</span>
-            <span className="font-mono">N/A</span>
-          </div>
-        </div>
+        <h2 className="text-lg font-semibold mb-3">Analytics</h2>
+        <Button
+          onClick={() => router.push("/dashboard/analytics")}
+          className="w-full"
+          variant="outline"
+        >
+          <BarChart3 className="mr-2 h-4 w-4" />
+          View Analytics
+        </Button>
       </section>
 
       {/* Dark Mode Toggle */}
