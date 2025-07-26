@@ -21,6 +21,7 @@ import {
   processYouTubeTranscript,
   fetchChannelVideos,
 } from "../actions/youtube/youtubeTranscriptActions";
+import { processAIChat } from "../actions/youtube/aiChatActions";
 import { createClient } from "../../../supabase/client";
 import type { TimedBlock } from "../actions/youtube/youtubeTranscriptActions";
 import {
@@ -38,6 +39,7 @@ import {
   Send,
   Video,
   List,
+  HelpCircle,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -139,19 +141,106 @@ export default function Dashboard() {
   const [chatInput, setChatInput] = useState("");
   const chatEndRef = useRef<HTMLDivElement>(null);
 
+  // --- Ask Popup State ---
+  const [showAskPopup, setShowAskPopup] = useState(false);
+
   // Scroll to bottom when new message
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [chatMessages]);
 
-  // Placeholder send handler (no AI logic yet)
-  const handleSendChat = (e?: React.FormEvent) => {
+  // Close ask popup when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Element;
+      if (
+        showAskPopup &&
+        !target.closest(".ask-popup") &&
+        !target.closest(".ask-button")
+      ) {
+        setShowAskPopup(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [showAskPopup]);
+
+  // AI chat handler with transcript integration
+  const handleSendChat = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     const input = chatInput.trim();
-    if (!input) return;
+    if (!input || !transcriptData) return;
+
+    // Add user message to chat
     setChatMessages((msgs) => [...msgs, { role: "user", content: input }]);
     setChatInput("");
-    // TODO: Add AI response logic here
+
+    // Show loading state
+    setChatMessages((msgs) => [
+      ...msgs,
+      { role: "ai", content: "Thinking..." },
+    ]);
+
+    try {
+      console.log("Calling AI chat with:", { input, transcriptData });
+
+      // Call AI chat action
+      const result = await processAIChat(input, transcriptData);
+
+      console.log("AI chat result:", result);
+
+      if (!result.success) {
+        throw new Error(result.error || "Failed to get AI response");
+      }
+
+      // Remove loading message and add AI response
+      setChatMessages((msgs) => {
+        const filtered = msgs.filter((msg) => msg.content !== "Thinking...");
+        return [
+          ...filtered,
+          { role: "ai", content: result.response || "No response generated" },
+        ];
+      });
+    } catch (error) {
+      console.error("AI chat error:", error);
+      // Remove loading message and add error
+      setChatMessages((msgs) => {
+        const filtered = msgs.filter((msg) => msg.content !== "Thinking...");
+        return [
+          ...filtered,
+          {
+            role: "ai",
+            content:
+              error instanceof Error
+                ? error.message
+                : "Sorry, I encountered an error. Please try again.",
+          },
+        ];
+      });
+    }
+  };
+
+  // Handle ask option selection
+  const handleAskOption = (option: string) => {
+    let message = "";
+    switch (option) {
+      case "summarize":
+        message = "Summarize the main points of this video";
+        break;
+      case "takeaways":
+        message = "What are the main key takeaways of this video";
+        break;
+      case "quotes":
+        message = "What are the important quotes mentioned in the video";
+        break;
+      default:
+        message = option;
+    }
+    setChatInput(message);
+    setShowAskPopup(false);
   };
 
   const [channelVideos, setChannelVideos] = useState<ChannelVideo[]>([]);
@@ -938,10 +1027,54 @@ export default function Dashboard() {
                       ))}
                       <div ref={chatEndRef} />
                     </div>
+
+                    {/* Ask Button - Above Input */}
+                    <div className="flex justify-end relative w-[60%] mx-auto">
+                      <button
+                        type="button"
+                        onClick={() => setShowAskPopup(!showAskPopup)}
+                        className="ask-button rounded-full bg-purple-100 hover:bg-purple-200 px-3 py-1.5 transition-colors border border-purple-200 flex items-center gap-1.5"
+                      >
+                        <HelpCircle className="h-3.5 w-3.5 text-purple-600" />
+                        <span className="text-xs font-medium text-purple-600">
+                          Ask
+                        </span>
+                      </button>
+
+                      {/* Ask Popup */}
+                      {showAskPopup && (
+                        <div className="ask-popup absolute bottom-full right-0 mb-2 bg-white rounded-lg border border-purple-200 shadow-lg p-3 min-w-[200px] z-50">
+                          <div className="text-sm font-medium text-purple-600 mb-2">
+                            Overview
+                          </div>
+                          <div className="space-y-1">
+                            <button
+                              onClick={() => handleAskOption("summarize")}
+                              className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-purple-50 rounded-md transition-colors"
+                            >
+                              Summarize main points
+                            </button>
+                            <button
+                              onClick={() => handleAskOption("takeaways")}
+                              className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-purple-50 rounded-md transition-colors"
+                            >
+                              Key takeaways
+                            </button>
+                            <button
+                              onClick={() => handleAskOption("quotes")}
+                              className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-purple-50 rounded-md transition-colors"
+                            >
+                              Important quotes
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
                     {/* Input box */}
                     <form
                       onSubmit={handleSendChat}
-                      className="flex items-center gap-2 px-2 py-2 bg-background rounded-xl shadow border mt-2"
+                      className="flex items-center gap-2 px-2 py-2 bg-background rounded-xl shadow border mt-2 relative w-[60%] mx-auto"
                     >
                       <input
                         type="text"
@@ -955,12 +1088,12 @@ export default function Dashboard() {
                       <button
                         type="submit"
                         disabled={!chatInput.trim()}
-                        className="ml-2 rounded-full bg-primary/10 hover:bg-primary/20 p-3 transition-colors"
+                        className="rounded-full bg-primary/10 hover:bg-primary/20 p-2 transition-colors"
                       >
-                        <Send className="h-5 w-5 text-primary" />
+                        <Send className="h-6 w-6 text-primary" />
                       </button>
                     </form>
-                    <div className="text-xs text-muted-foreground mt-2 flex items-center gap-1">
+                    <div className="text-xs text-muted-foreground mt-2 flex items-center gap-1 justify-center">
                       <span role="img" aria-label="lightbulb">
                         💡
                       </span>
