@@ -21,7 +21,7 @@ import {
   processYouTubeTranscript,
   fetchChannelVideos,
 } from "../actions/youtube/youtubeTranscriptActions";
-//import { processAIChat } from "../actions/youtube/aiChatActions";
+import { processAIChat } from "../actions/youtube/aiChatActions";
 import { createClient } from "../../../supabase/client";
 import type { TimedBlock } from "../actions/youtube/youtubeTranscriptActions";
 import {
