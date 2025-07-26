@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import DashboardNavbar from "@/components/dashboard-navbar";
 import { Button } from "@/components/ui/button";
 import {
@@ -21,7 +22,10 @@ import {
   processYouTubeTranscript,
   fetchChannelVideos,
 } from "../actions/youtube/youtubeTranscriptActions";
-import { processAIChat } from "../actions/youtube/aiChatActions";
+import {
+  processAIChatWithStorage,
+  getChatSession,
+} from "../actions/youtube/aiChatActions";
 import { createClient } from "../../../supabase/client";
 import type { TimedBlock } from "../actions/youtube/youtubeTranscriptActions";
 import {
@@ -187,8 +191,12 @@ export default function Dashboard() {
     try {
       console.log("Calling AI chat with:", { input, transcriptData });
 
-      // Call AI chat action
-      const result = await processAIChat(input, transcriptData);
+      // Call AI chat action with storage
+      const result = await processAIChatWithStorage(
+        input,
+        transcriptData,
+        user.id
+      );
 
       console.log("AI chat result:", result);
 
@@ -286,6 +294,82 @@ export default function Dashboard() {
 
     fetchUserData();
   }, []);
+
+  // Handle videoId query parameter for pre-loading transcript
+  useEffect(() => {
+    const handleVideoIdFromQuery = async () => {
+      // Get videoId from URL query parameter
+      const urlParams = new URLSearchParams(window.location.search);
+      const videoIdFromQuery = urlParams.get("videoId");
+
+      if (videoIdFromQuery && !transcriptData && !isLoading) {
+        setIsLoading(true);
+        setError("");
+
+        try {
+          // Fetch transcript from cache using videoId
+          const supabase = createClient();
+          const { data: transcriptCache, error } = await supabase
+            .from("youtube_transcript_cache")
+            .select("*")
+            .eq("video_id", videoIdFromQuery)
+            .single();
+
+          if (error || !transcriptCache) {
+            setError("Transcript not found in cache.");
+            setIsLoading(false);
+            return;
+          }
+
+          // Convert cache data to TranscriptData format
+          const transcriptDataFromCache: TranscriptData = {
+            url: transcriptCache.url,
+            title: transcriptCache.output?.data?.title || "Video Title",
+            duration: transcriptCache.output?.data?.duration || "--:--:--",
+            transcriptPlain:
+              transcriptCache.output?.data?.transcriptPlain || "",
+            transcriptTimed:
+              transcriptCache.output?.data?.transcriptTimed || "",
+            transcriptVtt: transcriptCache.output?.data?.transcriptVtt || "",
+            transcriptBlocks:
+              transcriptCache.output?.data?.transcriptBlocks || [],
+            summary: transcriptCache.output?.data?.summary || "",
+            processedAt: transcriptCache.created_at,
+            thumbnailUrl: transcriptCache.output?.data?.thumbnailUrl,
+          };
+
+          setTranscriptData(transcriptDataFromCache);
+          setUrl(transcriptCache.url); // Pre-fill the input
+          setSuccess("Transcript loaded from history!");
+
+          // Check if chat session exists for this video
+          const chatSessionData = await getChatSession(
+            videoIdFromQuery,
+            user.id
+          );
+
+          if (chatSessionData) {
+            // Load existing chat messages
+            const formattedMessages = chatSessionData.messages.map((msg) => ({
+              role: msg.role as "user" | "ai",
+              content: msg.content,
+            }));
+            setChatMessages(formattedMessages);
+          }
+        } catch (err) {
+          console.error("Error loading transcript from cache:", err);
+          setError("Failed to load transcript from cache.");
+        } finally {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    // Only run if we have a user and no transcript data
+    if (user && !transcriptData) {
+      handleVideoIdFromQuery();
+    }
+  }, [user, transcriptData, isLoading]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

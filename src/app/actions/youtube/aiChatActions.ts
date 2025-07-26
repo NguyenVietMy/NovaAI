@@ -1,5 +1,6 @@
 "use server";
 import OpenAI from "openai";
+import { createClient as createServerClient } from "../../../../supabase/server";
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY!,
@@ -15,6 +16,15 @@ export interface AIChatResult {
   success: boolean;
   response?: string;
   error?: string;
+}
+
+export interface ChatSessionData {
+  user_id: string;
+  video_id: string;
+  video_title: string;
+  video_url: string;
+  transcript_data: any;
+  model_used?: string;
 }
 
 /** ---------- Helpers: keep them tiny ---------- */
@@ -41,6 +51,12 @@ const sanitize = (s: string): string => {
   let out = s.replace(/<script/gi, "[REDACTED]"); // bare-minimum XSS guard
   if (out.length > 4000) out = out.slice(0, 4000) + "...";
   return out;
+};
+
+// Extract video ID from YouTube URL
+const extractVideoId = (url: string): string | null => {
+  const match = url.match(/[?&]v=([^&#]+)/);
+  return match ? match[1] : null;
 };
 
 /** ---------- MAIN: minimal prompt, no forced format ---------- */
@@ -84,7 +100,6 @@ export const processAIChat = async (
       `URL: ${transcriptData.url}\n\n` +
       `TRANSCRIPT:\n${transcript}`;
 
-    // No “focus modes”, no canned formats—just the user’s prompt.
     // Log the complete prompt being sent to OpenAI
     console.log("=== COMPLETE OPENAI PROMPT ===");
     console.log("SYSTEM PROMPT:");
@@ -137,5 +152,153 @@ export const processAIChat = async (
       success: false,
       error: "Failed to process AI chat request. Please try again",
     };
+  }
+};
+
+/**
+ * Process AI chat with session storage
+ * This function handles both AI processing and database storage
+ */
+export const processAIChatWithStorage = async (
+  userInput: string | Promise<string>,
+  transcriptData: TranscriptData,
+  userId: string
+): Promise<AIChatResult> => {
+  try {
+    // First, process the AI chat
+    const aiResult = await processAIChat(userInput, transcriptData);
+
+    if (!aiResult.success) {
+      return aiResult;
+    }
+
+    // Extract video ID from transcript URL
+    const videoId = extractVideoId(transcriptData.url);
+    if (!videoId) {
+      console.error("Could not extract video ID from URL:", transcriptData.url);
+      return aiResult; // Return AI result even if storage fails
+    }
+
+    // Get server-side Supabase client
+    const supabase = await createServerClient();
+
+    try {
+      // Check if chat session exists for this user and video
+      let { data: existingSession } = await supabase
+        .from("chat_sessions")
+        .select("id")
+        .eq("video_id", videoId)
+        .eq("user_id", userId)
+        .single();
+
+      let sessionId = existingSession?.id;
+
+      // Create new session if it doesn't exist
+      if (!sessionId) {
+        const { data: newSession, error: sessionError } = await supabase
+          .from("chat_sessions")
+          .insert({
+            user_id: userId,
+            video_id: videoId,
+            video_title: transcriptData.title,
+            video_url: transcriptData.url,
+            transcript_data: transcriptData,
+            model_used: "gpt-4o-mini",
+          })
+          .select("id")
+          .single();
+
+        if (sessionError) {
+          console.error("Error creating chat session:", sessionError);
+        } else {
+          sessionId = newSession.id;
+        }
+      }
+
+      // Save messages to database
+      if (sessionId) {
+        const userMsg = await resolveToString(userInput);
+        const messagesToSave = [
+          {
+            session_id: sessionId,
+            role: "user",
+            content: userMsg,
+          },
+          {
+            session_id: sessionId,
+            role: "assistant",
+            content: aiResult.response || "No response generated",
+          },
+        ];
+
+        const { error: messageError } = await supabase
+          .from("chat_messages")
+          .insert(messagesToSave);
+
+        if (messageError) {
+          console.error("Error saving chat messages:", messageError);
+        } else {
+          console.log(
+            "Chat messages saved successfully for session:",
+            sessionId
+          );
+        }
+      }
+    } catch (storageError) {
+      console.error("Error in chat session storage:", storageError);
+      // Don't fail the AI response if storage fails
+    }
+
+    return aiResult;
+  } catch (error) {
+    console.error("Error in processAIChatWithStorage:", error);
+    return {
+      success: false,
+      error: "Failed to process chat request. Please try again.",
+    };
+  }
+};
+
+/**
+ * Get chat session and messages for a video
+ */
+export const getChatSession = async (
+  videoId: string,
+  userId: string
+): Promise<{
+  session: any;
+  messages: Array<{ role: string; content: string; created_at: string }>;
+} | null> => {
+  try {
+    const supabase = await createServerClient();
+
+    // Get chat session
+    const { data: session, error: sessionError } = await supabase
+      .from("chat_sessions")
+      .select("*")
+      .eq("video_id", videoId)
+      .eq("user_id", userId)
+      .single();
+
+    if (sessionError || !session) {
+      return null;
+    }
+
+    // Get chat messages
+    const { data: messages, error: messagesError } = await supabase
+      .from("chat_messages")
+      .select("role, content, created_at")
+      .eq("session_id", session.id)
+      .order("created_at", { ascending: true });
+
+    if (messagesError) {
+      console.error("Error fetching chat messages:", messagesError);
+      return { session, messages: [] };
+    }
+
+    return { session, messages: messages || [] };
+  } catch (error) {
+    console.error("Error getting chat session:", error);
+    return null;
   }
 };

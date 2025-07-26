@@ -19,6 +19,7 @@ import {
 } from "../../components/ui/tabs";
 import { Clock, FileText, Play } from "lucide-react";
 import DashboardNavbar from "../../components/dashboard-navbar";
+import { Button } from "@/components/ui/button";
 
 // Helper to fetch YouTube video metadata
 async function fetchYouTubeMetadata(videoId: string) {
@@ -262,6 +263,28 @@ export default function HistoryPage() {
                     </div>
                   </TabsContent>
                 </Tabs>
+
+                {/* AI Chat Button */}
+                <div className="mt-6">
+                  <button
+                    className="w-full bg-purple-600 hover:bg-purple-700 text-white py-2 px-4 rounded-lg transition-colors flex items-center justify-center gap-2"
+                    onClick={() => {
+                      // Extract videoId from modalData.url or modalData.output.data.videoId
+                      const videoId =
+                        modalData.output?.data?.videoId ||
+                        (modalData.url &&
+                          modalData.url.match(/[?&]v=([^&#]+)/)?.[1]);
+                      if (videoId) {
+                        window.location.href = `/dashboard?videoId=${videoId}`;
+                      }
+                    }}
+                  >
+                    <span role="img" aria-label="chat">
+                      💬
+                    </span>
+                    AI Chat
+                  </button>
+                </div>
               </div>
             </DialogContent>
           </Dialog>
