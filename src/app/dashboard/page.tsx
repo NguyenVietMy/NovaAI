@@ -25,6 +25,7 @@ import {
 import {
   processAIChatWithStorage,
   getChatSession,
+  clearChatHistory,
 } from "../actions/youtube/aiChatActions";
 import { createClient } from "../../../supabase/client";
 import type { TimedBlock } from "../actions/youtube/youtubeTranscriptActions";
@@ -118,6 +119,12 @@ function isYouTubeVideoUrl(url: string): boolean {
   } catch {
     return false;
   }
+}
+
+// Extract video ID from YouTube URL
+function extractVideoId(url: string): string | null {
+  const match = url.match(/[?&]v=([^&#]+)/);
+  return match ? match[1] : null;
 }
 
 export default function Dashboard() {
@@ -414,6 +421,30 @@ export default function Dashboard() {
         if (result?.data) {
           setTranscriptData(result.data as TranscriptData);
           setSuccess("Transcript generated successfully!");
+
+          // Load chat history for the new transcript
+          const videoId = extractVideoId(result.data.url);
+          if (videoId && user) {
+            try {
+              const chatSessionData = await getChatSession(videoId, user.id);
+              if (chatSessionData) {
+                // Load existing chat messages
+                const formattedMessages = chatSessionData.messages.map(
+                  (msg) => ({
+                    role: msg.role as "user" | "ai",
+                    content: msg.content,
+                  })
+                );
+                setChatMessages(formattedMessages);
+              } else {
+                // Clear chat messages for new transcript
+                setChatMessages([]);
+              }
+            } catch (error) {
+              console.error("Error loading chat history:", error);
+              setChatMessages([]);
+            }
+          }
         } else if (result?.error) {
           setError(result.error);
         }
@@ -1113,7 +1144,51 @@ export default function Dashboard() {
                     </div>
 
                     {/* Ask Button - Above Input */}
-                    <div className="flex justify-end relative w-[60%] mx-auto">
+                    <div className="flex justify-end relative w-[60%] mx-auto gap-2">
+                      {chatMessages.length > 0 && (
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            setChatMessages([]);
+                            // Also clear from database
+                            if (transcriptData && user) {
+                              const videoId = extractVideoId(
+                                transcriptData.url
+                              );
+                              if (videoId) {
+                                try {
+                                  const result = await clearChatHistory(
+                                    videoId,
+                                    user.id
+                                  );
+                                  if (!result.success) {
+                                    console.error(
+                                      "Failed to clear chat history:",
+                                      result.error
+                                    );
+                                    // Optionally show error to user
+                                    setError(
+                                      "Failed to clear chat history from database"
+                                    );
+                                  }
+                                } catch (error) {
+                                  console.error(
+                                    "Error clearing chat history:",
+                                    error
+                                  );
+                                  setError("Failed to clear chat history");
+                                }
+                              }
+                            }
+                          }}
+                          className="rounded-full bg-red-100 hover:bg-red-200 px-3 py-1.5 transition-colors border border-red-200 flex items-center gap-1.5"
+                          title="Clear chat history"
+                        >
+                          <span className="text-xs font-medium text-red-600">
+                            Clear Chat
+                          </span>
+                        </button>
+                      )}
                       <button
                         type="button"
                         onClick={() => setShowAskPopup(!showAskPopup)}
