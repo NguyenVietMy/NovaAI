@@ -365,8 +365,8 @@ export const processAIChat = async (
       `For example, if user says "01:35", look for the block where 01:35 falls between the start and end times.\n` +
       `If user says "01:35", find the block like [01:20-01:40] that contains 01:35, NOT [01:40-02:00] or whatever.\n` +
       `Use timestamps when they are helpful for the user's question.\n` +
-      `If the user asks for something not supported by the transcript, say briefly: ` +
-      `"I can't answer that from the transcript." Otherwise, answer directly.\n\n` +
+      `Do your best to answer from the transcript, even if the answer is not worded exactly the same. Use judgment and inference.\n` +
+      `Only say "I can't answer that from the transcript" if it's clearly unrelated or completely unsupported by the content.\n\n` +
       `VIDEO CONTEXT:\n` +
       `Title: ${transcriptData.title}\n` +
       `URL: ${transcriptData.url}\n\n` +
