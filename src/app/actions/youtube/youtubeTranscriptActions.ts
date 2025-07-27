@@ -361,6 +361,18 @@ export const processYouTubeTranscript = async (formData: FormData) => {
       },
     ]);
 
+    // --- STORE TRANSCRIPT CHUNKS FOR SEMANTIC SEARCH ---
+    if (user_id && timedBlocks.length > 0) {
+      try {
+        const { storeTranscriptChunks } = await import("./aiChatActions");
+        await storeTranscriptChunks(videoId, timedBlocks, user_id);
+        console.log("Stored transcript chunks for semantic search");
+      } catch (error) {
+        console.error("Failed to store transcript chunks:", error);
+        // Don't fail the transcript processing if chunk storage fails
+      }
+    }
+
     return output;
   } catch (err: any) {
     console.error("Transcript error:", err);

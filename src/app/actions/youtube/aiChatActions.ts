@@ -34,6 +34,203 @@ export interface ChatMessage {
   content: string;
 }
 
+// New interface for transcript chunks
+export interface TranscriptChunk {
+  chunk_id: string;
+  start_sec: number;
+  end_sec: number;
+  text: string;
+  embedding?: number[];
+}
+
+/**
+ * Convert time string to seconds
+ */
+const timeToSeconds = (timeStr: string): number => {
+  const parts = timeStr.split(":").map(Number);
+  if (parts.length === 2) {
+    return parts[0] * 60 + parts[1];
+  } else if (parts.length === 3) {
+    return parts[0] * 3600 + parts[1] * 60 + parts[2];
+  }
+  return 0;
+};
+
+/**
+ * Generate embedding for text using OpenAI
+ */
+const generateEmbedding = async (text: string): Promise<number[]> => {
+  try {
+    const response = await openai.embeddings.create({
+      model: "text-embedding-3-small",
+      input: text,
+    });
+    return response.data[0].embedding;
+  } catch (error) {
+    console.error("Error generating embedding:", error);
+    throw error;
+  }
+};
+
+/**
+ * Store transcript chunks with embeddings
+ */
+export const storeTranscriptChunks = async (
+  videoId: string,
+  transcriptBlocks: Array<{ start: string; end: string; text: string }>,
+  userId: string
+): Promise<{ success: boolean; error?: string }> => {
+  try {
+    const supabase = await createServerClient();
+
+    // Group blocks into chunks (1 block per chunk for better granularity)
+    const chunks: TranscriptChunk[] = [];
+    for (let i = 0; i < transcriptBlocks.length; i++) {
+      const block = transcriptBlocks[i];
+
+      const startSec = timeToSeconds(block.start);
+      const endSec = timeToSeconds(block.end);
+
+      const text = `${block.start} - ${block.end} : ${block.text}`;
+
+      chunks.push({
+        chunk_id: `${videoId}-${startSec}`,
+        start_sec: startSec,
+        end_sec: endSec,
+        text: text,
+      });
+    }
+
+    console.log(`Creating ${chunks.length} chunks for video ${videoId}`);
+
+    // Generate embeddings for each chunk
+    for (const chunk of chunks) {
+      try {
+        console.log(
+          `Processing chunk ${chunk.chunk_id}: ${chunk.text.substring(0, 100)}...`
+        );
+        const embedding = await generateEmbedding(chunk.text);
+
+        // Store chunk with embedding
+        const { error } = await supabase
+          .from("youtube_transcript_chunks")
+          .upsert({
+            video_id: videoId,
+            chunk_id: chunk.chunk_id,
+            start_sec: chunk.start_sec,
+            end_sec: chunk.end_sec,
+            text: chunk.text,
+            embedding: embedding,
+            user_id: userId,
+          });
+
+        if (error) {
+          console.error("Error storing chunk:", error);
+        } else {
+          console.log(`Successfully stored chunk ${chunk.chunk_id}`);
+        }
+      } catch (error) {
+        console.error("Error processing chunk:", error);
+      }
+    }
+
+    return { success: true };
+  } catch (error) {
+    console.error("Error storing transcript chunks:", error);
+    return { success: false, error: "Failed to store transcript chunks" };
+  }
+};
+
+/**
+ * Find relevant transcript chunks using semantic search
+ */
+export const findRelevantChunks = async (
+  videoId: string,
+  userQuestion: string,
+  matchThreshold: number = 0.3
+): Promise<{
+  chunks: TranscriptChunk[];
+  topSimilarity?: number;
+  error?: string;
+}> => {
+  try {
+    console.log("Starting semantic search for video:", videoId);
+    console.log("User question:", userQuestion);
+
+    // Generate embedding for user question
+    const questionEmbedding = await generateEmbedding(userQuestion);
+    console.log("Generated embedding, length:", questionEmbedding.length);
+
+    const supabase = await createServerClient();
+
+    // First, check if chunks exist for this video
+    const { data: existingChunks, error: checkError } = await supabase
+      .from("youtube_transcript_chunks")
+      .select("chunk_id, text")
+      .eq("video_id", videoId)
+      .limit(5);
+
+    if (checkError) {
+      console.error("Error checking for existing chunks:", checkError);
+    } else {
+      console.log("Existing chunks found:", existingChunks?.length || 0);
+      if (existingChunks && existingChunks.length > 0) {
+        console.log(
+          "Sample chunks:",
+          existingChunks.slice(0, 2).map((c) => ({
+            chunk_id: c.chunk_id,
+            text_length: c.text?.length || 0,
+          }))
+        );
+      }
+    }
+
+    // Use the match_chunks function to find relevant chunks
+    const { data: matches, error } = await supabase.rpc("match_chunks", {
+      query_embedding: questionEmbedding,
+      match_threshold: matchThreshold,
+      match_count: 3, // Get top 3 highest similarity chunks
+      video_id_param: videoId,
+    });
+
+    if (error) {
+      console.error("Error finding relevant chunks:", error);
+      return { chunks: [], error: "Failed to find relevant chunks" };
+    }
+
+    console.log("Matches found:", matches?.length || 0);
+    if (matches && matches.length > 0) {
+      console.log("Top match similarity:", matches[0].similarity);
+      console.log("Top match text:", matches[0].text?.substring(0, 200));
+
+      // Check if similarity is high enough to use chunks
+      if (matches[0].similarity > 0.41) {
+        console.log("High similarity score, using top 3 chunks");
+      } else {
+        console.log("Low similarity score, will use full transcript");
+      }
+    } else {
+      console.log("No matches found - this might indicate:");
+      console.log("1. No chunks exist for this video");
+      console.log("2. Similarity threshold too high");
+      console.log("3. Embedding generation failed");
+    }
+
+    // Convert to TranscriptChunk format
+    const chunks: TranscriptChunk[] = matches.map((match: any) => ({
+      chunk_id: match.chunk_id,
+      start_sec: match.start_sec,
+      end_sec: match.end_sec,
+      text: match.text,
+    }));
+
+    return { chunks, topSimilarity: matches[0]?.similarity };
+  } catch (error) {
+    console.error("Error in semantic search:", error);
+    return { chunks: [], error: "Failed to perform semantic search" };
+  }
+};
+
 /** ---------- Helpers: keep them tiny ---------- */
 const toPrimitiveString = (v: unknown): string => {
   if (v == null) return "";
@@ -66,11 +263,40 @@ const extractVideoId = (url: string): string | null => {
   return match ? match[1] : null;
 };
 
+/**
+ * Get full transcript from transcript data
+ */
+const getFullTranscript = async (
+  transcriptData: TranscriptData
+): Promise<string> => {
+  const blocks = transcriptData.transcriptBlocks || [];
+  let t: string;
+
+  if (blocks.length > 0) {
+    // Use transcriptBlocks format with timestamps
+    t = blocks
+      .map(
+        (block: { start: string; end: string; text: string }) =>
+          `${block.start} - ${block.end} : ${block.text}`
+      )
+      .join("\n");
+  } else {
+    // Fallback to transcriptTimed for older cached data
+    t = Array.isArray(transcriptData.transcriptTimed)
+      ? transcriptData.transcriptTimed.map(toPrimitiveString).join("\n")
+      : toPrimitiveString(transcriptData.transcriptTimed);
+  }
+
+  const MAX = 60_000;
+  return t.length > MAX ? t.slice(0, MAX) + "\n\n[Transcript truncated]" : t;
+};
+
 /** ---------- MAIN: minimal prompt, no forced format ---------- */
 export const processAIChat = async (
   userInput: string | Promise<string>,
   transcriptData: TranscriptData,
-  conversationHistory: ChatMessage[] = []
+  conversationHistory: ChatMessage[] = [],
+  useSemanticSearch: boolean = true
 ): Promise<AIChatResult> => {
   try {
     if (!process.env.OPENAI_API_KEY) {
@@ -83,30 +309,48 @@ export const processAIChat = async (
       return { success: false, error: "Invalid transcript data" };
     }
 
-    // Use transcriptBlocks format with timestamps for better context
-    const blocks = transcriptData.transcriptBlocks || [];
-    let t: string;
+    // Extract video ID for semantic search
+    const videoId = extractVideoId(transcriptData.url);
+    let relevantTranscript = "";
 
-    if (blocks.length > 0) {
-      // Use transcriptBlocks format with timestamps
-      t = blocks
-        .map(
-          (block: { start: string; end: string; text: string }) =>
-            `${block.start} - ${block.end} : ${block.text}`
-        )
-        .join("\n");
+    if (useSemanticSearch && videoId) {
+      try {
+        // Try semantic search first
+        const { chunks, topSimilarity, error } = await findRelevantChunks(
+          videoId,
+          userMsg
+        );
+
+        if (chunks.length > 0 && topSimilarity && topSimilarity > 0.41) {
+          // Sort chunks by start_sec to maintain chronological order
+          const sortedChunks = chunks.sort((a, b) => a.start_sec - b.start_sec);
+
+          // Use relevant chunks in chronological order
+          relevantTranscript = sortedChunks
+            .map((chunk) => chunk.text)
+            .join("\n\n");
+          console.log(
+            "Using semantic search - found",
+            chunks.length,
+            "relevant chunks (sorted chronologically)"
+          );
+        } else {
+          console.log(
+            "Low similarity or no chunks found, using full transcript"
+          );
+          // Use full transcript when similarity is too low or no chunks found
+          relevantTranscript = await getFullTranscript(transcriptData);
+        }
+      } catch (error) {
+        console.error("Semantic search failed, using full transcript:", error);
+        relevantTranscript = await getFullTranscript(transcriptData);
+      }
     } else {
-      // Fallback to transcriptTimed for older cached data
-      t = Array.isArray(transcriptData.transcriptTimed)
-        ? transcriptData.transcriptTimed.map(toPrimitiveString).join("\n")
-        : toPrimitiveString(transcriptData.transcriptTimed);
+      // Use full transcript
+      relevantTranscript = await getFullTranscript(transcriptData);
     }
 
-    const MAX = 60_000;
-    const transcript =
-      t.length > MAX ? t.slice(0, MAX) + "\n\n[Transcript truncated]" : t;
-
-    if (!transcript.trim()) {
+    if (!relevantTranscript.trim()) {
       return { success: false, error: "Transcript is empty." };
     }
 
@@ -126,7 +370,7 @@ export const processAIChat = async (
       `VIDEO CONTEXT:\n` +
       `Title: ${transcriptData.title}\n` +
       `URL: ${transcriptData.url}\n\n` +
-      `TRANSCRIPT:\n${transcript}`;
+      `TRANSCRIPT:\n${relevantTranscript}`;
 
     // Build messages array with conversation history
     const messages: ChatMessage[] = [
@@ -138,13 +382,7 @@ export const processAIChat = async (
     // Log the complete prompt being sent to OpenAI
     console.log("=== COMPLETE OPENAI PROMPT ===");
     console.log("CONVERSATION HISTORY LENGTH:", conversationHistory.length);
-    console.log(
-      "TRANSCRIPT FORMAT:",
-      blocks.length > 0
-        ? "transcriptBlocks (with timestamps)"
-        : "transcriptTimed (fallback)"
-    );
-    console.log("TRANSCRIPT LENGTH:", t.length, "characters");
+    console.log("TRANSCRIPT LENGTH:", relevantTranscript.length, "characters");
     console.log("MESSAGES:", JSON.stringify(messages, null, 2));
     console.log("=== END PROMPT ===");
 
@@ -274,7 +512,8 @@ export const processAIChatWithStorage = async (
     const aiResult = await processAIChat(
       userInput,
       transcriptData,
-      conversationHistory
+      conversationHistory,
+      true
     );
 
     if (!aiResult.success) {
