@@ -384,7 +384,7 @@ export const processAIChat = async (
     console.log("CONVERSATION HISTORY LENGTH:", conversationHistory.length);
     console.log("TRANSCRIPT LENGTH:", relevantTranscript.length, "characters");
     console.log("MESSAGES:", JSON.stringify(messages, null, 2));
-    console.log("=== END PROMPT ===");
+    console.log("== END PROMPT ==");
 
     const completion = await openai.chat.completions.create({
       model: "gpt-4o-mini",
