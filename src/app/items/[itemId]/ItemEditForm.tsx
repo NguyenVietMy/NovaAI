@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import type { Item, Folder, ItemType } from "@/types/supabase";
-import type { TimedBlock } from "@/app/actions/youtube/youtubeTranscriptActions";
+import type { TimedBlock } from "@/types/supabase";
 import type { ApiResponse } from "@/types/api";
 import { updateItem, deleteItem } from "../../actions/projects/itemActions";
 import { useRouter } from "next/navigation";

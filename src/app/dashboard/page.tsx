@@ -10,6 +10,7 @@ import UrlInputForm from "@/components/dashboard/UrlInputForm";
 import AiSummaryPanel from "@/components/dashboard/AiSummaryPanel";
 import TranscriptResults from "@/components/dashboard/TranscriptResults";
 import ChannelVideosTable from "@/components/dashboard/ChannelVideosTable";
+import YouTubeVideoPlayer from "@/components/dashboard/YouTubeVideoPlayer";
 import { getUserSubscriptionDetails } from "../actions/auth_actions/authActions";
 import {
   processYouTubeTranscript,
@@ -498,6 +499,15 @@ export default function Dashboard() {
           {/* AI Summary Panel */}
           {transcriptData && <AiSummaryPanel transcriptData={transcriptData} />}
         </div>
+
+        {/* YouTube Video Player */}
+        {transcriptData && (
+          <YouTubeVideoPlayer
+            videoUrl={transcriptData.url}
+            thumbnailUrl={transcriptData.thumbnailUrl}
+            className="max-w-4xl mx-auto"
+          />
+        )}
 
         {/* Transcript Results */}
         {transcriptData && (
