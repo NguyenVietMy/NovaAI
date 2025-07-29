@@ -28,7 +28,7 @@ import {
   clearChatHistory,
 } from "../actions/youtube/aiChatActions";
 import { createClient } from "../../../supabase/client";
-import type { TimedBlock } from "../actions/youtube/youtubeTranscriptActions";
+import type { TimedBlock } from "../../types/supabase";
 import {
   FileText,
   Download,

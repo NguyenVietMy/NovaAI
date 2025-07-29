@@ -10,12 +10,14 @@ import {
   ChannelVideo,
   FetchChannelVideosResult,
   YtDlpChannelDump,
+  TimedBlock,
 } from "../../../types/supabase";
 
-// --- YOUTUBE HELPER FUNCTIONS ---
+// --- YOUTUBE API HELPER FUNCTIONS ---
 
 /**
  * Fetches metadata (title, thumbnail, and duration) from YouTube for a given video ID.
+ * Uses the YouTube Data API v3 to get video information.
  */
 const fetchYouTubeMetadata = async (videoId: string, apiKey: string) => {
   const res = await fetch(
@@ -55,6 +57,7 @@ const fetchYouTubeMetadata = async (videoId: string, apiKey: string) => {
 
 /**
  * Extracts the YouTube video ID from various possible URL formats.
+ * Supports youtu.be, youtube.com/watch?v=, and youtube.com/shorts/ formats.
  */
 const extractVideoId = (url: string): string | null => {
   try {
@@ -68,6 +71,8 @@ const extractVideoId = (url: string): string | null => {
     return null;
   }
 };
+
+// --- VTT DOWNLOAD AND PARSING FUNCTIONS ---
 
 /**
  * Downloads the auto-generated VTT subtitles from YouTube for the given video,
@@ -111,8 +116,6 @@ const downloadVttAndExtractText = async (
     });
   });
 };
-
-// --- VTT PARSING FUNCTIONS ---
 
 /**
  * Parses a raw VTT file string into two versions:
@@ -180,55 +183,22 @@ const parseVtt = (raw: string): { plain: string; timed: string } => {
   };
 };
 
-// --- OPENAI SUMMARY FUNCTION ---
+// --- TRANSCRIPT PROCESSING FUNCTIONS ---
+
 /**
- * Summarizes the plain transcript using the OpenAI chat model,
- * producing a concise multi-sentence summary.
- */
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
-
-const summarizeTranscript = async (text: string): Promise<string> => {
-  const maxLength = 8000;
-  const input = text.length > maxLength ? text.slice(0, maxLength) : text;
-
-  try {
-    const prompt = `Summarize the following YouTube transcript in 4-6 sentences:\n\n${input}`;
-    const chatResponse = await openai.chat.completions.create({
-      model: "gpt-3.5-turbo",
-      messages: [
-        {
-          role: "system",
-          content: "You summarize YouTube transcripts clearly and concisely.",
-        },
-        { role: "user", content: prompt },
-      ],
-      temperature: 0.7,
-      max_tokens: 300,
-    });
-
-    return (
-      chatResponse.choices[0].message.content?.trim() || "No summary available."
-    );
-  } catch (err) {
-    console.error("AI summary error:", JSON.stringify(err, null, 2));
-    return "Server error, failed to initialize AI chat";
-  }
-};
-
-// --- TRANSCRIPT BLOCK GROUPING ---
-/**
- * Turns
+ * Turns timed transcript lines into blocks with start/end times and text.
+ * Groups transcript lines into time windows for better organization.
+ *
+ * Example input:
  *   00:00:01.719  night building little projects on
  *   00:00:03.960  weekends maybe even finding leak code
- *   …
- * into blocks like
+ *
+ * Example output:
  *   { start:"00:00:00", end:"00:00:20", text:"night building little projects on weekends …" }
  *
  * @param timed       transcriptTimed (one line per cue, space-separated)
  * @param windowSize  size of each bucket in seconds (default 20)
  */
-
-export type TimedBlock = { start: string; end: string; text: string };
 export async function groupTimedTranscript(
   timed: string,
   windowSize = 20
@@ -274,7 +244,69 @@ export async function groupTimedTranscript(
     });
 }
 
+// --- AI SUMMARY FUNCTIONS ---
+
+/**
+ * Summarizes the plain transcript using the OpenAI chat model,
+ * producing a concise multi-sentence summary.
+ */
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
+
+const summarizeTranscript = async (text: string): Promise<string> => {
+  const maxLength = 8000;
+  const input = text.length > maxLength ? text.slice(0, maxLength) : text;
+
+  try {
+    const prompt = `Summarize the following YouTube transcript in 4-6 sentences:\n\n${input}`;
+    const chatResponse = await openai.chat.completions.create({
+      model: "gpt-3.5-turbo",
+      messages: [
+        {
+          role: "system",
+          content: "You summarize YouTube transcripts clearly and concisely.",
+        },
+        { role: "user", content: prompt },
+      ],
+      temperature: 0.7,
+      max_tokens: 300,
+    });
+
+    return (
+      chatResponse.choices[0].message.content?.trim() || "No summary available."
+    );
+  } catch (err) {
+    console.error("AI summary error:", JSON.stringify(err, null, 2));
+    return "Server error, failed to initialize AI chat";
+  }
+};
+
+// --- BACKGROUND PROCESSING FUNCTIONS ---
+
+/**
+ * Store transcript chunks in background without blocking the main transcript fetch.
+ * This allows transcript fetching to be fast while chunks are processed in background.
+ */
+const storeTranscriptChunksInBackground = async (
+  videoId: string,
+  timedBlocks: TimedBlock[],
+  userId: string
+): Promise<void> => {
+  try {
+    console.log(`Starting background chunk storage for video ${videoId}`);
+    const { storeTranscriptChunks } = await import("./aiChatActions");
+    await storeTranscriptChunks(videoId, timedBlocks, userId);
+    console.log(`Background chunk storage completed for video ${videoId}`);
+  } catch (error) {
+    console.error(
+      `Background chunk storage failed for video ${videoId}:`,
+      error
+    );
+    throw error; // Re-throw to be caught by the caller
+  }
+};
+
 // --- MAIN ENTRYPOINT FUNCTION ---
+
 /**
  * Processes a YouTube URL submitted via form data:
  * - extracts video ID,
@@ -380,27 +412,7 @@ export const processYouTubeTranscript = async (formData: FormData) => {
   }
 };
 
-/**
- * Store transcript chunks in background without blocking the main transcript fetch
- */
-const storeTranscriptChunksInBackground = async (
-  videoId: string,
-  timedBlocks: TimedBlock[],
-  userId: string
-): Promise<void> => {
-  try {
-    console.log(`Starting background chunk storage for video ${videoId}`);
-    const { storeTranscriptChunks } = await import("./aiChatActions");
-    await storeTranscriptChunks(videoId, timedBlocks, userId);
-    console.log(`Background chunk storage completed for video ${videoId}`);
-  } catch (error) {
-    console.error(
-      `Background chunk storage failed for video ${videoId}:`,
-      error
-    );
-    throw error; // Re-throw to be caught by the caller
-  }
-};
+// --- CHANNEL VIDEO FETCHING FUNCTIONS ---
 
 const YTDLP_PATH = "./yt-dlp.exe";
 

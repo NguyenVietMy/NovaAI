@@ -375,3 +375,46 @@ export type FetchChannelVideosResult =
       success: false;
       error: string;
     };
+
+// --- AI Chat Types ---
+
+export interface TranscriptData {
+  transcriptTimed: unknown; // string | string[] | any
+  transcriptBlocks?: Array<{ start: string; end: string; text: string }>;
+  title: string;
+  url: string;
+}
+
+export interface AIChatResult {
+  success: boolean;
+  response?: string;
+  error?: string;
+}
+
+export interface ChatSessionData {
+  user_id: string;
+  video_id: string;
+  video_title: string;
+  video_url: string;
+  transcript_data: any;
+  model_used?: string;
+}
+
+// Interface for conversation messages
+export interface ChatMessage {
+  role: "system" | "user" | "assistant";
+  content: string;
+}
+
+// Interface for transcript chunks
+export interface TranscriptChunk {
+  chunk_id: string;
+  start_sec: number;
+  end_sec: number;
+  text: string;
+  embedding?: number[];
+}
+
+// --- YouTube Transcript Types ---
+
+export type TimedBlock = { start: string; end: string; text: string };

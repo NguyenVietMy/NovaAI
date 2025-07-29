@@ -1,50 +1,23 @@
 "use server";
 import OpenAI from "openai";
 import { createClient as createServerClient } from "../../../../supabase/server";
+import {
+  TranscriptData,
+  AIChatResult,
+  ChatSessionData,
+  ChatMessage,
+  TranscriptChunk,
+} from "../../../types/supabase";
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY!,
 });
 
-export interface TranscriptData {
-  transcriptTimed: unknown; // string | string[] | any
-  transcriptBlocks?: Array<{ start: string; end: string; text: string }>;
-  title: string;
-  url: string;
-}
-
-export interface AIChatResult {
-  success: boolean;
-  response?: string;
-  error?: string;
-}
-
-export interface ChatSessionData {
-  user_id: string;
-  video_id: string;
-  video_title: string;
-  video_url: string;
-  transcript_data: any;
-  model_used?: string;
-}
-
-// New interface for conversation messages
-export interface ChatMessage {
-  role: "system" | "user" | "assistant";
-  content: string;
-}
-
-// New interface for transcript chunks
-export interface TranscriptChunk {
-  chunk_id: string;
-  start_sec: number;
-  end_sec: number;
-  text: string;
-  embedding?: number[];
-}
+// --- UTILITY HELPER FUNCTIONS ---
 
 /**
- * Convert time string to seconds
+ * Convert time string to seconds for timestamp processing.
+ * Supports formats like "MM:SS" and "HH:MM:SS".
  */
 const timeToSeconds = (timeStr: string): number => {
   const parts = timeStr.split(":").map(Number);
@@ -57,7 +30,8 @@ const timeToSeconds = (timeStr: string): number => {
 };
 
 /**
- * Generate embedding for text using OpenAI
+ * Generate embedding for text using OpenAI's text-embedding-3-small model.
+ * Used for semantic search functionality.
  */
 const generateEmbedding = async (text: string): Promise<number[]> => {
   try {
@@ -73,7 +47,82 @@ const generateEmbedding = async (text: string): Promise<number[]> => {
 };
 
 /**
- * Store transcript chunks with embeddings
+ * Convert any value to a primitive string representation.
+ * Handles null, undefined, numbers, booleans, and objects.
+ */
+const toPrimitiveString = (v: unknown): string => {
+  if (v == null) return "";
+  if (typeof v === "string") return v;
+  if (typeof v === "number" || typeof v === "boolean" || typeof v === "bigint")
+    return String(v);
+  try {
+    const j = JSON.stringify(v);
+    return typeof j === "string" ? j : String(v);
+  } catch {
+    return String(v);
+  }
+};
+
+/**
+ * Resolve a value to string, handling promises and complex types.
+ */
+const resolveToString = async (maybe: unknown): Promise<string> => {
+  const r = await Promise.resolve(maybe as any);
+  return String(toPrimitiveString(r));
+};
+
+/**
+ * Sanitize user input to prevent XSS and limit length.
+ * Keeps sanitization light to avoid mangling user instructions.
+ */
+const sanitize = (s: string): string => {
+  let out = s.replace(/<script/gi, "[REDACTED]"); // bare-minimum XSS guard
+  if (out.length > 4000) out = out.slice(0, 4000) + "...";
+  return out;
+};
+
+/**
+ * Extract video ID from YouTube URL for semantic search functionality.
+ */
+const extractVideoId = (url: string): string | null => {
+  const match = url.match(/[?&]v=([^&#]+)/);
+  return match ? match[1] : null;
+};
+
+/**
+ * Get full transcript from transcript data, handling different formats.
+ * Supports both transcriptBlocks and transcriptTimed formats.
+ */
+const getFullTranscript = async (
+  transcriptData: TranscriptData
+): Promise<string> => {
+  const blocks = transcriptData.transcriptBlocks || [];
+  let t: string;
+
+  if (blocks.length > 0) {
+    // Use transcriptBlocks format with timestamps
+    t = blocks
+      .map(
+        (block: { start: string; end: string; text: string }) =>
+          `${block.start} - ${block.end} : ${block.text}`
+      )
+      .join("\n");
+  } else {
+    // Fallback to transcriptTimed for older cached data
+    t = Array.isArray(transcriptData.transcriptTimed)
+      ? transcriptData.transcriptTimed.map(toPrimitiveString).join("\n")
+      : toPrimitiveString(transcriptData.transcriptTimed);
+  }
+
+  const MAX = 60_000;
+  return t.length > MAX ? t.slice(0, MAX) + "\n\n[Transcript truncated]" : t;
+};
+
+// --- TRANSCRIPT CHUNK MANAGEMENT FUNCTIONS ---
+
+/**
+ * Store transcript chunks with embeddings for semantic search.
+ * Groups transcript blocks into chunks and generates embeddings for each.
  */
 export const storeTranscriptChunks = async (
   videoId: string,
@@ -142,7 +191,8 @@ export const storeTranscriptChunks = async (
 };
 
 /**
- * Find relevant transcript chunks using semantic search
+ * Find relevant transcript chunks using semantic search.
+ * Uses OpenAI embeddings and Supabase's match_chunks function.
  */
 export const findRelevantChunks = async (
   videoId: string,
@@ -204,7 +254,7 @@ export const findRelevantChunks = async (
       console.log("Top match text:", matches[0].text?.substring(0, 200));
 
       // Check if similarity is high enough to use chunks
-      if (matches[0].similarity > 0.41) {
+      if (matches[0].similarity > 0.37) {
         console.log("High similarity score, using top 3 chunks");
       } else {
         console.log("Low similarity score, will use full transcript");
@@ -231,67 +281,12 @@ export const findRelevantChunks = async (
   }
 };
 
-/** ---------- Helpers: keep them tiny ---------- */
-const toPrimitiveString = (v: unknown): string => {
-  if (v == null) return "";
-  if (typeof v === "string") return v;
-  if (typeof v === "number" || typeof v === "boolean" || typeof v === "bigint")
-    return String(v);
-  try {
-    const j = JSON.stringify(v);
-    return typeof j === "string" ? j : String(v);
-  } catch {
-    return String(v);
-  }
-};
-
-const resolveToString = async (maybe: unknown): Promise<string> => {
-  const r = await Promise.resolve(maybe as any);
-  return String(toPrimitiveString(r));
-};
-
-// keep sanitization light so we don't mangle the user's instruction
-const sanitize = (s: string): string => {
-  let out = s.replace(/<script/gi, "[REDACTED]"); // bare-minimum XSS guard
-  if (out.length > 4000) out = out.slice(0, 4000) + "...";
-  return out;
-};
-
-// Extract video ID from YouTube URL
-const extractVideoId = (url: string): string | null => {
-  const match = url.match(/[?&]v=([^&#]+)/);
-  return match ? match[1] : null;
-};
+// --- AI CHAT PROCESSING FUNCTIONS ---
 
 /**
- * Get full transcript from transcript data
+ * Process AI chat with minimal prompt and no forced format.
+ * Handles both semantic search and full transcript approaches.
  */
-const getFullTranscript = async (
-  transcriptData: TranscriptData
-): Promise<string> => {
-  const blocks = transcriptData.transcriptBlocks || [];
-  let t: string;
-
-  if (blocks.length > 0) {
-    // Use transcriptBlocks format with timestamps
-    t = blocks
-      .map(
-        (block: { start: string; end: string; text: string }) =>
-          `${block.start} - ${block.end} : ${block.text}`
-      )
-      .join("\n");
-  } else {
-    // Fallback to transcriptTimed for older cached data
-    t = Array.isArray(transcriptData.transcriptTimed)
-      ? transcriptData.transcriptTimed.map(toPrimitiveString).join("\n")
-      : toPrimitiveString(transcriptData.transcriptTimed);
-  }
-
-  const MAX = 60_000;
-  return t.length > MAX ? t.slice(0, MAX) + "\n\n[Transcript truncated]" : t;
-};
-
-/** ---------- MAIN: minimal prompt, no forced format ---------- */
 export const processAIChat = async (
   userInput: string | Promise<string>,
   transcriptData: TranscriptData,
@@ -347,7 +342,7 @@ export const processAIChat = async (
               userMsg
             );
 
-            if (chunks.length > 0 && topSimilarity && topSimilarity > 0.41) {
+            if (chunks.length > 0 && topSimilarity && topSimilarity > 0.37) {
               // Sort chunks by start_sec to maintain chronological order
               const sortedChunks = chunks.sort(
                 (a, b) => a.start_sec - b.start_sec
@@ -394,9 +389,9 @@ export const processAIChat = async (
       return { success: false, error: "Transcript is empty." };
     }
 
-    // *** Minimal system prompt: follow the user's instruction; use only the transcript. ***
+    // *** Enhanced system prompt: be more helpful and inferential ***
     const systemPrompt =
-      `You are an assistant that has ONLY the transcript below.\n` +
+      `You are a helpful assistant analyzing a YouTube transcript. You have access to the transcript below.\n` +
       `Follow the user's instructions EXACTLY (style, format, focus, length, etc.).\n` +
       `Do NOT add extra sections or headings unless the user asks.\n` +
       `The transcript format is: "start - end : content" (e.g., "01:20 - 01:40 : aaaaaaaa").\n` +
@@ -405,8 +400,14 @@ export const processAIChat = async (
       `For example, if user says "01:35", look for the block where 01:35 falls between the start and end times.\n` +
       `If user says "01:35", find the block like [01:20-01:40] that contains 01:35, NOT [01:40-02:00] or whatever.\n` +
       `Use timestamps when they are helpful for the user's question.\n` +
-      `Do your best to answer from the transcript, even if the answer is not worded exactly the same. Use judgment and inference.\n` +
-      `Only say "I can't answer that from the transcript" if it's clearly unrelated or completely unsupported by the content.\n\n` +
+      `CRITICAL: Be EXTREMELY helpful and inferential. If the user asks about something that's even remotely related to the content:\n` +
+      `- Infer meaning from context, tone, and implications\n` +
+      `- Connect related concepts even if not explicitly stated\n` +
+      `- Provide educated guesses based on what IS in the transcript\n` +
+      `- If something is implied or suggested, acknowledge it\n` +
+      `- Only say "I can't answer that from the transcript or it's not mentioned" if it's completely unrelated (like asking about a different video or topic)\n` +
+      `- Even if the exact answer isn't there, try to provide the closest possible response based on available information\n` +
+      `- Use common sense and logical reasoning to fill gaps\n\n` +
       `VIDEO CONTEXT:\n` +
       `Title: ${transcriptData.title}\n` +
       `URL: ${transcriptData.url}\n\n` +
@@ -464,9 +465,11 @@ export const processAIChat = async (
   }
 };
 
+// --- CHAT SESSION MANAGEMENT FUNCTIONS ---
+
 /**
- * Process AI chat with session storage and conversation history
- * This function handles both AI processing and database storage with memory
+ * Process AI chat with session storage and conversation history.
+ * This function handles both AI processing and database storage with memory.
  */
 export const processAIChatWithStorage = async (
   userInput: string | Promise<string>,
@@ -606,7 +609,8 @@ export const processAIChatWithStorage = async (
 };
 
 /**
- * Get chat session and messages for a video
+ * Get chat session and messages for a video.
+ * Retrieves existing conversation history for a specific video and user.
  */
 export const getChatSession = async (
   videoId: string,
@@ -650,7 +654,8 @@ export const getChatSession = async (
 };
 
 /**
- * Clear chat history for a video
+ * Clear chat history for a video.
+ * Removes all conversation messages for a specific video and user.
  */
 export const clearChatHistory = async (
   videoId: string,
@@ -695,8 +700,11 @@ export const clearChatHistory = async (
   }
 };
 
+// --- CHUNK STATUS FUNCTIONS ---
+
 /**
- * Check if transcript chunks are ready for semantic search for a given video
+ * Check if transcript chunks are ready for semantic search for a given video.
+ * Returns the count of available chunks and whether they're ready for use.
  */
 export const checkChunksReady = async (
   videoId: string
