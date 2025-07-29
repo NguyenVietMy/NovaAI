@@ -361,22 +361,44 @@ export const processYouTubeTranscript = async (formData: FormData) => {
       },
     ]);
 
-    // --- STORE TRANSCRIPT CHUNKS FOR SEMANTIC SEARCH ---
+    // --- STORE TRANSCRIPT CHUNKS FOR SEMANTIC SEARCH (BACKGROUND TASK) ---
     if (user_id && timedBlocks.length > 0) {
-      try {
-        const { storeTranscriptChunks } = await import("./aiChatActions");
-        await storeTranscriptChunks(videoId, timedBlocks, user_id);
-        console.log("Stored transcript chunks for semantic search");
-      } catch (error) {
-        console.error("Failed to store transcript chunks:", error);
-        // Don't fail the transcript processing if chunk storage fails
-      }
+      // Fire and forget - don't wait for chunk storage to complete
+      // This allows transcript fetching to be fast while chunks are processed in background
+      storeTranscriptChunksInBackground(videoId, timedBlocks, user_id).catch(
+        (error) => {
+          console.error("Background chunk storage failed:", error);
+          // Don't fail the transcript processing if background chunk storage fails
+        }
+      );
     }
 
     return output;
   } catch (err: any) {
     console.error("Transcript error:", err);
     return { error: `Failed to fetch transcript: ${err.message}` };
+  }
+};
+
+/**
+ * Store transcript chunks in background without blocking the main transcript fetch
+ */
+const storeTranscriptChunksInBackground = async (
+  videoId: string,
+  timedBlocks: TimedBlock[],
+  userId: string
+): Promise<void> => {
+  try {
+    console.log(`Starting background chunk storage for video ${videoId}`);
+    const { storeTranscriptChunks } = await import("./aiChatActions");
+    await storeTranscriptChunks(videoId, timedBlocks, userId);
+    console.log(`Background chunk storage completed for video ${videoId}`);
+  } catch (error) {
+    console.error(
+      `Background chunk storage failed for video ${videoId}:`,
+      error
+    );
+    throw error; // Re-throw to be caught by the caller
   }
 };
 

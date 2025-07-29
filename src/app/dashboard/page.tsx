@@ -150,14 +150,14 @@ export default function Dashboard() {
     { role: "user" | "ai"; content: string }[]
   >([]);
   const [chatInput, setChatInput] = useState("");
-  const chatEndRef = useRef<HTMLDivElement>(null);
-
-  // --- Ask Popup State ---
   const [showAskPopup, setShowAskPopup] = useState(false);
 
   // Scroll to bottom when new message
   useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (chatMessages.length > 0) {
+      // Simple scroll to bottom without ref
+      window.scrollTo(0, document.body.scrollHeight);
+    }
   }, [chatMessages]);
 
   // Close ask popup when clicking outside
@@ -462,6 +462,37 @@ export default function Dashboard() {
     setChannelVideos([]);
     setSelectedVideos([]);
   }, [videoType]);
+
+  // Periodically check if chunks are ready for semantic search
+  useEffect(() => {
+    if (!transcriptData || !user) return;
+
+    const videoId = extractVideoId(transcriptData.url);
+    if (!videoId) return;
+
+    // Check immediately
+    const checkChunks = async () => {
+      try {
+        const { checkChunksReady } = await import(
+          "../actions/youtube/aiChatActions"
+        );
+        const result = await checkChunksReady(videoId);
+        // Don't update UI, just log for debugging
+        console.log("Chunks status:", result);
+      } catch (error) {
+        console.error("Error checking chunks:", error);
+      }
+    };
+
+    checkChunks();
+
+    // Check every 10 seconds if chunks are still processing
+    const interval = setInterval(() => {
+      checkChunks();
+    }, 10000);
+
+    return () => clearInterval(interval);
+  }, [transcriptData, user]);
 
   const downloadTranscript = (
     format:
@@ -1140,7 +1171,6 @@ export default function Dashboard() {
                           </div>
                         </div>
                       ))}
-                      <div ref={chatEndRef} />
                     </div>
 
                     {/* Ask Button - Above Input */}

@@ -315,30 +315,70 @@ export const processAIChat = async (
 
     if (useSemanticSearch && videoId) {
       try {
-        // Try semantic search first
-        const { chunks, topSimilarity, error } = await findRelevantChunks(
-          videoId,
-          userMsg
-        );
+        // Check if ALL chunks exist for this video
+        const supabase = await createServerClient();
+        const { data: existingChunks, error: checkError } = await supabase
+          .from("youtube_transcript_chunks")
+          .select("chunk_id")
+          .eq("video_id", videoId);
 
-        if (chunks.length > 0 && topSimilarity && topSimilarity > 0.41) {
-          // Sort chunks by start_sec to maintain chronological order
-          const sortedChunks = chunks.sort((a, b) => a.start_sec - b.start_sec);
+        if (checkError) {
+          console.error("Error checking for chunks:", checkError);
+        }
 
-          // Use relevant chunks in chronological order
-          relevantTranscript = sortedChunks
-            .map((chunk) => chunk.text)
-            .join("\n\n");
-          console.log(
-            "Using semantic search - found",
-            chunks.length,
-            "relevant chunks (sorted chronologically)"
+        // Only use semantic search if we have chunks AND they represent the full video
+        // We'll estimate this by checking if we have chunks for the expected duration
+        if (existingChunks && existingChunks.length > 0) {
+          // Get the expected number of chunks based on video duration
+          const expectedChunks = Math.ceil(
+            transcriptData.transcriptBlocks?.length || 0
           );
+          const actualChunks = existingChunks.length;
+
+          console.log(
+            `Chunks found: ${actualChunks}/${expectedChunks} for video ${videoId}`
+          );
+
+          // Only use semantic search if we have ALL chunks (or close to it - allow 95% completion)
+          if (actualChunks >= expectedChunks * 0.95) {
+            console.log("All chunks processed, attempting semantic search");
+            const { chunks, topSimilarity, error } = await findRelevantChunks(
+              videoId,
+              userMsg
+            );
+
+            if (chunks.length > 0 && topSimilarity && topSimilarity > 0.41) {
+              // Sort chunks by start_sec to maintain chronological order
+              const sortedChunks = chunks.sort(
+                (a, b) => a.start_sec - b.start_sec
+              );
+
+              // Use relevant chunks in chronological order
+              relevantTranscript = sortedChunks
+                .map((chunk) => chunk.text)
+                .join("\n\n");
+              console.log(
+                "Using semantic search - found",
+                chunks.length,
+                "relevant chunks (sorted chronologically)"
+              );
+            } else {
+              console.log(
+                "Low similarity or no chunks found, using full transcript"
+              );
+              // Use full transcript when similarity is too low or no chunks found
+              relevantTranscript = await getFullTranscript(transcriptData);
+            }
+          } else {
+            console.log(
+              `Incomplete chunks (${actualChunks}/${expectedChunks}), using full transcript`
+            );
+            // Use full transcript when chunks are still being processed
+            relevantTranscript = await getFullTranscript(transcriptData);
+          }
         } else {
-          console.log(
-            "Low similarity or no chunks found, using full transcript"
-          );
-          // Use full transcript when similarity is too low or no chunks found
+          // No chunks exist yet (still being processed in background)
+          console.log("No chunks found yet, using full transcript");
           relevantTranscript = await getFullTranscript(transcriptData);
         }
       } catch (error) {
@@ -652,5 +692,36 @@ export const clearChatHistory = async (
   } catch (error) {
     console.error("Error clearing chat history:", error);
     return { success: false, error: "Failed to clear chat history" };
+  }
+};
+
+/**
+ * Check if transcript chunks are ready for semantic search for a given video
+ */
+export const checkChunksReady = async (
+  videoId: string
+): Promise<{ ready: boolean; count?: number; error?: string }> => {
+  try {
+    const supabase = await createServerClient();
+    const { data: chunks, error } = await supabase
+      .from("youtube_transcript_chunks")
+      .select("chunk_id")
+      .eq("video_id", videoId);
+
+    if (error) {
+      console.error("Error checking chunks:", error);
+      return { ready: false, error: "Failed to check chunks" };
+    }
+
+    const count = chunks?.length || 0;
+    const ready = count > 0;
+
+    console.log(
+      `Chunks ready for video ${videoId}: ${ready} (${count} chunks)`
+    );
+    return { ready, count };
+  } catch (error) {
+    console.error("Error in checkChunksReady:", error);
+    return { ready: false, error: "Failed to check chunks" };
   }
 };
