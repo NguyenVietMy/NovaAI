@@ -63,7 +63,7 @@ export default function MyAccountModal() {
       <section className="mb-8">
         <h2 className="text-lg font-semibold mb-3">Analytics</h2>
         <Button
-          onClick={() => router.push("/dashboard/analytics")}
+          onClick={() => router.push("/analytics")}
           className="w-full"
           variant="outline"
         >

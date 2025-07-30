@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { createClient } from "../../supabase/server";
 import { Button } from "./ui/button";
-import { User, UserCircle, FileText } from "lucide-react";
+import { User, UserCircle, FileText, BarChart3 } from "lucide-react";
 import UserProfile from "./user-profile";
 import {
   Tooltip,
@@ -105,6 +105,20 @@ export default async function Navbar() {
               </TooltipTrigger>
               <TooltipContent side="bottom">
                 View your action history.
+              </TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Link
+                  href="/analytics"
+                  className="text-base font-semibold text-gray-700 hover:text-gray-900 flex items-center gap-1"
+                >
+                  <BarChart3 className="w-4 h-4" />
+                  Analytics
+                </Link>
+              </TooltipTrigger>
+              <TooltipContent side="bottom">
+                View your usage analytics and rankings.
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
