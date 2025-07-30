@@ -8,8 +8,8 @@ import { FileText, ChevronDown, ChevronUp } from "lucide-react";
 import type { TranscriptData } from "@/types/supabase";
 
 interface YouTubeVideoPlayerProps {
-  videoUrl: string; // Any YouTube URL
-  thumbnailUrl?: string; // Optional "click to play" poster
+  videoUrl: string;
+  thumbnailUrl?: string;
   className?: string;
   transcriptData?: TranscriptData;
   showTranscript?: boolean;
@@ -27,10 +27,8 @@ export default function YouTubeVideoPlayer({
   const [isTranscriptVisible, setIsTranscriptVisible] =
     useState(showTranscript);
 
-  // Robust timeupdate handler (works across providers)
+  // Handle time updates from ReactPlayer
   const handleTimeUpdate = (payload: any) => {
-    // v3 exposes onTimeUpdate; payload shape may vary by provider
-    // Prefer numeric seconds, then currentTime, else read from ref.
     const t =
       typeof payload === "number"
         ? payload
@@ -41,7 +39,7 @@ export default function YouTubeVideoPlayer({
     setCurrentTime(t);
   };
 
-  // Format 90:05 => "1:30:05" / "12:05"
+  // Format seconds to "MM:SS" or "HH:MM:SS"
   const formatTime = (s: number) => {
     const sec = Math.max(0, Math.floor(s));
     const h = Math.floor(sec / 3600);
@@ -52,7 +50,7 @@ export default function YouTubeVideoPlayer({
       : `${m}:${xs.toString().padStart(2, "0")}`;
   };
 
-  // Parse "HH:MM:SS" or "HH:MM:SS.mmm" or "MM:SS" -> seconds
+  // Parse timestamp to seconds
   const parseTimestamp = (timestamp: string): number => {
     const full = timestamp.match(/^(\d{1,2}):(\d{2}):(\d{2})(?:\.(\d{1,3}))?$/);
     if (full) {
@@ -76,25 +74,21 @@ export default function YouTubeVideoPlayer({
     return 0;
   };
 
-  // Seek (v3 aims to mirror HTMLMediaElement; fallback to legacy seekTo)
+  // Seek to specific time in video
   const seekToSeconds = (seconds: number) => {
     const inst = playerRef.current as any;
     if (!inst) return;
-    if (
-      typeof inst.currentTime === "number" ||
-      typeof inst.currentTime === "undefined"
-    ) {
-      try {
-        inst.currentTime = seconds; // preferred in v3
-      } catch {
-        if (typeof inst.seekTo === "function") inst.seekTo(seconds, "seconds");
+
+    try {
+      inst.currentTime = seconds; // ReactPlayer v3 preferred method
+    } catch {
+      if (typeof inst.seekTo === "function") {
+        inst.seekTo(seconds, "seconds");
       }
-    } else if (typeof inst.seekTo === "function") {
-      inst.seekTo(seconds, "seconds");
     }
   };
 
-  // Transcript with clickable rows
+  // Render transcript with clickable timestamps
   const renderTranscriptWithTimestamps = () => {
     if (!transcriptData?.transcriptTimed) return null;
 
@@ -113,9 +107,9 @@ export default function YouTubeVideoPlayer({
 
           const [, timestamp, text] = match;
           const displayTimestamp = timestamp.replace(/\.\d{3}$/, "");
-          const ts = parseTimestamp(timestamp); // keep ms accuracy for seeking
+          const ts = parseTimestamp(timestamp);
 
-          // Determine current line using next timestamp boundary
+          // Determine if this is the current line
           const nextMatch = lines[index + 1]?.match(
             /^(\d{2}:\d{2}:\d{2}\.\d{3})/
           );
@@ -178,7 +172,6 @@ export default function YouTubeVideoPlayer({
             controls
             light={thumbnailUrl || false}
             onTimeUpdate={handleTimeUpdate}
-            // You can pass YouTube params through config.youtube (per docs)
             config={{ youtube: { rel: 0 } }}
           />
         </div>
