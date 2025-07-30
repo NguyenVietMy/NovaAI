@@ -170,7 +170,6 @@ export default function YouTubeVideoPlayer({
             width="100%"
             height="100%"
             controls
-            light={thumbnailUrl || false}
             onTimeUpdate={handleTimeUpdate}
             config={{ youtube: { rel: 0 } }}
           />

@@ -96,147 +96,106 @@ export default function TranscriptResults({
             <TabsTrigger value="plain">Full Transcript</TabsTrigger>
             <TabsTrigger value="summary">AI Chat</TabsTrigger>
           </TabsList>
-          {/* Copy/Download Buttons */}
-          <div className="mt-2 mb-4 flex items-center z-10">
-            {activeTab === "plain" ? (
-              <>
-                {/* Move Copy button to the far left */}
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="sm" className="flex gap-2">
-                      <Copy className="h-4 w-4" />
-                      Copy
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="start">
-                    <DropdownMenuItem onClick={() => onCopy("withTimestamp")}>
-                      Copy with timestamp
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => onCopy("plain")}>
-                      Copy without timestamp
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-                {/* Download buttons follow */}
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="sm">
-                      <Download className="mr-2 h-4 w-4" />
-                      .TXT
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="start">
-                    <DropdownMenuItem
-                      onClick={() =>
-                        onDownloadTranscript("txt", "withTimestamp")
-                      }
-                    >
-                      With Timestamps
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      onClick={() => onDownloadTranscript("txt", "plain")}
-                    >
-                      Without Timestamps
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => onDownloadTranscript("srt")}
-                >
-                  {" "}
-                  <Download className="mr-2 h-4 w-4" /> .SRT{" "}
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => onDownloadTranscript("json")}
-                >
-                  {" "}
-                  <Download className="mr-2 h-4 w-4" /> .JSON{" "}
-                </Button>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="sm">
-                      <Download className="mr-2 h-4 w-4" />
-                      .VTT
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="start">
-                    <DropdownMenuItem
-                      onClick={() => onDownloadTranscript("vtt-clean")}
-                    >
-                      Cleaned VTT
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      onClick={() => onDownloadTranscript("vtt-advanced")}
-                    >
-                      Advanced VTT
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => onDownloadTranscript("csv")}
-                >
-                  <Download className="mr-2 h-4 w-4" />
-                  .CSV
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => onDownloadTranscript("md")}
-                >
-                  <Download className="mr-2 h-4 w-4" />
-                  .MD
-                </Button>
-              </>
-            ) : (
-              <>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    // Download summary as txt
-                    const content = transcriptData.summary;
-                    const filename = `summary-${Date.now()}.txt`;
-                    const blob = new Blob([content], {
-                      type: "text/plain",
-                    });
-                    const url = URL.createObjectURL(blob);
-                    const a = document.createElement("a");
-                    a.href = url;
-                    a.download = filename;
-                    document.body.appendChild(a);
-                    a.click();
-                    document.body.removeChild(a);
-                    URL.revokeObjectURL(url);
-                  }}
-                >
-                  <Download className="mr-2 h-4 w-4" />
-                  .TXT
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="flex gap-2 ml-2"
-                  onClick={async () => {
-                    await navigator.clipboard.writeText(transcriptData.summary);
-                  }}
-                >
-                  <Copy className="h-4 w-4" />
-                  Copy
-                </Button>
-              </>
-            )}
-            {copyStatus && (
-              <span className="ml-3 text-xs text-muted-foreground animate-fade-in">
-                {copyStatus}
-              </span>
-            )}
-          </div>
+          {/* Copy/Download Buttons - Only for Full Transcript tab */}
+          {activeTab === "plain" && (
+            <div className="mt-2 mb-4 flex items-center z-10">
+              {/* Move Copy button to the far left */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm" className="flex gap-2">
+                    <Copy className="h-4 w-4" />
+                    Copy
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start">
+                  <DropdownMenuItem onClick={() => onCopy("withTimestamp")}>
+                    Copy with timestamp
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => onCopy("plain")}>
+                    Copy without timestamp
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+              {/* Download buttons follow */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm">
+                    <Download className="mr-2 h-4 w-4" />
+                    .TXT
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start">
+                  <DropdownMenuItem
+                    onClick={() => onDownloadTranscript("txt", "withTimestamp")}
+                  >
+                    With Timestamps
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => onDownloadTranscript("txt", "plain")}
+                  >
+                    Without Timestamps
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => onDownloadTranscript("srt")}
+              >
+                {" "}
+                <Download className="mr-2 h-4 w-4" /> .SRT{" "}
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => onDownloadTranscript("json")}
+              >
+                {" "}
+                <Download className="mr-2 h-4 w-4" /> .JSON{" "}
+              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm">
+                    <Download className="mr-2 h-4 w-4" />
+                    .VTT
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start">
+                  <DropdownMenuItem
+                    onClick={() => onDownloadTranscript("vtt-clean")}
+                  >
+                    Cleaned VTT
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => onDownloadTranscript("vtt-advanced")}
+                  >
+                    Advanced VTT
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => onDownloadTranscript("csv")}
+              >
+                <Download className="mr-2 h-4 w-4" />
+                .CSV
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => onDownloadTranscript("md")}
+              >
+                <Download className="mr-2 h-4 w-4" />
+                .MD
+              </Button>
+              {copyStatus && (
+                <span className="ml-3 text-xs text-muted-foreground animate-fade-in">
+                  {copyStatus}
+                </span>
+              )}
+            </div>
+          )}
           <TabsContent value="video" className="flex-1 min-h-0 relative z-20">
             <div className="h-full p-4" style={{ pointerEvents: "auto" }}>
               <YouTubeVideoPlayer
