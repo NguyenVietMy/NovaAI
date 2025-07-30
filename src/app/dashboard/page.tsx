@@ -69,7 +69,7 @@ export default function Dashboard() {
   const [success, setSuccess] = useState("");
   const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [copyStatus, setCopyStatus] = useState<string>("");
-  const [activeTab, setActiveTab] = useState("plain");
+  const [activeTab, setActiveTab] = useState("video");
   const [videoType, setVideoType] = useState<"single" | "channel">("single");
   const [fetchShorts, setFetchShorts] = useState(false);
 
@@ -499,22 +499,6 @@ export default function Dashboard() {
           {/* AI Summary Panel */}
           {transcriptData && <AiSummaryPanel transcriptData={transcriptData} />}
         </div>
-
-        {/* YouTube Video Player */}
-        {transcriptData && (
-          <YouTubeVideoPlayer
-            videoUrl={transcriptData.url}
-            thumbnailUrl={transcriptData.thumbnailUrl}
-            className="max-w-4xl mx-auto"
-            transcriptData={{
-              transcriptTimed: transcriptData.transcriptTimed,
-              transcriptBlocks: transcriptData.transcriptBlocks,
-              title: transcriptData.title,
-              url: transcriptData.url,
-            }}
-            showTranscript={false}
-          />
-        )}
 
         {/* Transcript Results */}
         {transcriptData && (

@@ -10,7 +10,8 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
-import { FileText, Download, Copy, Send, HelpCircle } from "lucide-react";
+import { FileText, Download, Copy, Send, HelpCircle, Play } from "lucide-react";
+import YouTubeVideoPlayer from "./YouTubeVideoPlayer";
 
 interface TranscriptData {
   url: string;
@@ -86,12 +87,12 @@ export default function TranscriptResults({
       </CardHeader>
       <CardContent className="flex-1 flex flex-col min-h-0">
         <Tabs
-          defaultValue="plain"
           className="relative flex-1 flex flex-col min-h-0 w-full"
           value={activeTab}
           onValueChange={onActiveTabChange}
         >
-          <TabsList className="grid w-full grid-cols-2 z-10">
+          <TabsList className="grid w-full grid-cols-3 z-10">
+            <TabsTrigger value="video">Video Player</TabsTrigger>
             <TabsTrigger value="plain">Full Transcript</TabsTrigger>
             <TabsTrigger value="summary">AI Chat</TabsTrigger>
           </TabsList>
@@ -236,6 +237,22 @@ export default function TranscriptResults({
               </span>
             )}
           </div>
+          <TabsContent value="video" className="flex-1 min-h-0 relative z-20">
+            <div className="h-full p-4" style={{ pointerEvents: "auto" }}>
+              <YouTubeVideoPlayer
+                videoUrl={transcriptData.url}
+                thumbnailUrl={transcriptData.thumbnailUrl}
+                transcriptData={{
+                  transcriptTimed: transcriptData.transcriptTimed,
+                  transcriptBlocks: transcriptData.transcriptBlocks,
+                  title: transcriptData.title,
+                  url: transcriptData.url,
+                }}
+                showTranscript={true}
+                className="w-full"
+              />
+            </div>
+          </TabsContent>
           <TabsContent
             value="plain"
             className="absolute inset-0 flex flex-col min-h-0 pt-[4.5rem]"
