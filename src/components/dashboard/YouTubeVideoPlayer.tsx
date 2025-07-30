@@ -5,14 +5,14 @@ import ReactPlayer from "react-player";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { FileText, ChevronDown, ChevronUp } from "lucide-react";
-import type { TimedBlock, TranscriptData } from "@/types/supabase";
+import type { TranscriptData } from "@/types/supabase";
 
 interface YouTubeVideoPlayerProps {
-  videoUrl: string; // Any YouTube URL (watch?v=..., youtu.be/..., etc.)
-  thumbnailUrl?: string; // Optional thumbnail for "click to play" poster
-  className?: string; // Optional wrapper classes
-  transcriptData?: TranscriptData; // Optional transcript data for inline display
-  showTranscript?: boolean; // Whether to show transcript inline
+  videoUrl: string; // Any YouTube URL
+  thumbnailUrl?: string; // Optional "click to play" poster
+  className?: string;
+  transcriptData?: TranscriptData;
+  showTranscript?: boolean;
 }
 
 export default function YouTubeVideoPlayer({
@@ -27,14 +27,21 @@ export default function YouTubeVideoPlayer({
   const [isTranscriptVisible, setIsTranscriptVisible] =
     useState(showTranscript);
 
-  // ReactPlayer -> progress ticks
-  const handleTimeUpdate = (event: React.SyntheticEvent<HTMLVideoElement>) => {
-    const video = event.currentTarget;
-    const playedSeconds = video.currentTime;
-    setCurrentTime(playedSeconds);
+  // Robust timeupdate handler (works across providers)
+  const handleTimeUpdate = (payload: any) => {
+    // v3 exposes onTimeUpdate; payload shape may vary by provider
+    // Prefer numeric seconds, then currentTime, else read from ref.
+    const t =
+      typeof payload === "number"
+        ? payload
+        : (payload?.seconds ??
+          payload?.currentTime ??
+          playerRef.current?.currentTime ??
+          0);
+    setCurrentTime(t);
   };
 
-  // Utility: 90:05 -> "1:30:05" / "12:05"
+  // Format 90:05 => "1:30:05" / "12:05"
   const formatTime = (s: number) => {
     const sec = Math.max(0, Math.floor(s));
     const h = Math.floor(sec / 3600);
@@ -45,35 +52,52 @@ export default function YouTubeVideoPlayer({
       : `${m}:${xs.toString().padStart(2, "0")}`;
   };
 
-  // Parse timestamp string to seconds (e.g., "00:01:23" -> 83)
+  // Parse "HH:MM:SS" or "HH:MM:SS.mmm" or "MM:SS" -> seconds
   const parseTimestamp = (timestamp: string): number => {
-    const parts = timestamp.split(":");
-    if (parts.length === 3) {
-      const hours = parseInt(parts[0], 10);
-      const minutes = parseInt(parts[1], 10);
-      const seconds = parseInt(parts[2], 10);
-      return hours * 3600 + minutes * 60 + seconds;
-    } else if (parts.length === 2) {
-      const minutes = parseInt(parts[0], 10);
-      const seconds = parseInt(parts[1], 10);
-      return minutes * 60 + seconds;
+    const full = timestamp.match(/^(\d{1,2}):(\d{2}):(\d{2})(?:\.(\d{1,3}))?$/);
+    if (full) {
+      const [, hh, mm, ss, ms] = full;
+      return (
+        parseInt(hh, 10) * 3600 +
+        parseInt(mm, 10) * 60 +
+        parseInt(ss, 10) +
+        (ms ? parseInt(ms, 10) / 1000 : 0)
+      );
+    }
+    const short = timestamp.match(/^(\d{1,2}):(\d{2})(?:\.(\d{1,3}))?$/);
+    if (short) {
+      const [, mm, ss, ms] = short;
+      return (
+        parseInt(mm, 10) * 60 +
+        parseInt(ss, 10) +
+        (ms ? parseInt(ms, 10) / 1000 : 0)
+      );
     }
     return 0;
   };
 
-  // Seek to specific timestamp
-  const seekToTimestamp = (timestamp: string) => {
-    const seconds = parseTimestamp(timestamp);
-    if (playerRef.current) {
-      playerRef.current.seekTo(seconds);
+  // Seek (v3 aims to mirror HTMLMediaElement; fallback to legacy seekTo)
+  const seekToSeconds = (seconds: number) => {
+    const inst = playerRef.current as any;
+    if (!inst) return;
+    if (
+      typeof inst.currentTime === "number" ||
+      typeof inst.currentTime === "undefined"
+    ) {
+      try {
+        inst.currentTime = seconds; // preferred in v3
+      } catch {
+        if (typeof inst.seekTo === "function") inst.seekTo(seconds, "seconds");
+      }
+    } else if (typeof inst.seekTo === "function") {
+      inst.seekTo(seconds, "seconds");
     }
   };
 
-  // Parse transcript timed format and create clickable timestamps
+  // Transcript with clickable rows
   const renderTranscriptWithTimestamps = () => {
     if (!transcriptData?.transcriptTimed) return null;
 
-    // Ensure transcriptTimed is a string
     const transcriptTimed =
       typeof transcriptData.transcriptTimed === "string"
         ? transcriptData.transcriptTimed
@@ -88,39 +112,48 @@ export default function YouTubeVideoPlayer({
           if (!match) return null;
 
           const [, timestamp, text] = match;
-          // Remove milliseconds for display
           const displayTimestamp = timestamp.replace(/\.\d{3}$/, "");
+          const ts = parseTimestamp(timestamp); // keep ms accuracy for seeking
 
-          // Parse timestamp to seconds for comparison
-          const timestampSeconds = parseTimestamp(displayTimestamp);
-          const isCurrentLine =
-            currentTime >= timestampSeconds &&
-            (index === lines.length - 1 ||
-              currentTime <
-                parseTimestamp(
-                  lines[index + 1]
-                    .match(/^(\d{2}:\d{2}:\d{2}\.\d{3})/)?.[1]
-                    ?.replace(/\.\d{3}$/, "") || "0"
-                ));
+          // Determine current line using next timestamp boundary
+          const nextMatch = lines[index + 1]?.match(
+            /^(\d{2}:\d{2}:\d{2}\.\d{3})/
+          );
+          const nextTs = nextMatch
+            ? parseTimestamp(nextMatch[1])
+            : Number.POSITIVE_INFINITY;
+          const isCurrentLine = currentTime >= ts && currentTime < nextTs;
+
+          const handleActivate = () => seekToSeconds(ts);
+          const handleKey = (e: React.KeyboardEvent<HTMLDivElement>) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              handleActivate();
+            }
+          };
 
           return (
             <div
               key={index}
-              className={`flex items-start gap-2 hover:bg-muted/50 p-1 rounded transition-colors ${
+              role="button"
+              tabIndex={0}
+              onClick={handleActivate}
+              onKeyDown={handleKey}
+              className={`flex items-start gap-2 p-1 rounded transition-colors cursor-pointer hover:bg-muted/50 ${
                 isCurrentLine ? "bg-primary/10 border-l-2 border-primary" : ""
               }`}
+              aria-current={isCurrentLine ? "true" : undefined}
+              title={`Jump to ${displayTimestamp}`}
             >
-              <button
-                onClick={() => seekToTimestamp(displayTimestamp)}
-                className={`font-mono text-xs px-2 py-1 rounded transition-colors ${
+              <span
+                className={`font-mono text-xs px-2 py-1 rounded ${
                   isCurrentLine
-                    ? "bg-primary text-primary-foreground hover:bg-primary/90"
-                    : "text-primary hover:text-primary/80 bg-primary/10 hover:bg-primary/20"
+                    ? "bg-primary text-primary-foreground"
+                    : "text-primary bg-primary/10"
                 }`}
-                title={`Jump to ${displayTimestamp}`}
               >
                 {displayTimestamp}
-              </button>
+              </span>
               <span
                 className={`flex-1 ${isCurrentLine ? "text-foreground font-medium" : "text-muted-foreground"}`}
               >
@@ -143,39 +176,36 @@ export default function YouTubeVideoPlayer({
             width="100%"
             height="100%"
             controls
-            light={thumbnailUrl || false} // shows poster until clicked
+            light={thumbnailUrl || false}
             onTimeUpdate={handleTimeUpdate}
-            config={{
-              youtube: {
-                rel: 0,
-              },
-            }}
+            // You can pass YouTube params through config.youtube (per docs)
+            config={{ youtube: { rel: 0 } }}
           />
         </div>
+
         <div className="p-3 text-xs md:text-sm text-muted-foreground flex items-center justify-between">
           <span>Time: {formatTime(currentTime)}</span>
           {transcriptData && (
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => setIsTranscriptVisible(!isTranscriptVisible)}
+              onClick={() => setIsTranscriptVisible((v) => !v)}
               className="flex items-center gap-1"
             >
               <FileText className="h-4 w-4" />
               {isTranscriptVisible ? (
                 <>
-                  Hide Transcript
-                  <ChevronUp className="h-4 w-4" />
+                  Hide Transcript <ChevronUp className="h-4 w-4" />
                 </>
               ) : (
                 <>
-                  Show Transcript
-                  <ChevronDown className="h-4 w-4" />
+                  Show Transcript <ChevronDown className="h-4 w-4" />
                 </>
               )}
             </Button>
           )}
         </div>
+
         {isTranscriptVisible && transcriptData && (
           <div className="px-3 pb-3 border-t">
             <h4 className="text-sm font-medium mb-2">Transcript</h4>
