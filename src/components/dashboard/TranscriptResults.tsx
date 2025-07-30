@@ -1,6 +1,4 @@
 "use client";
-
-import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -81,7 +79,7 @@ export default function TranscriptResults({
         <CardTitle className="flex items-center justify-between">
           <span className="flex items-center gap-2">
             <FileText className="h-5 w-5" />
-            Transcript & Downloads
+            Transcript Workspace
           </span>
         </CardTitle>
       </CardHeader>
@@ -93,7 +91,7 @@ export default function TranscriptResults({
         >
           <TabsList className="grid w-full grid-cols-3 z-10">
             <TabsTrigger value="video">Video Player</TabsTrigger>
-            <TabsTrigger value="plain">Full Transcript</TabsTrigger>
+            <TabsTrigger value="plain">Transcript Export</TabsTrigger>
             <TabsTrigger value="summary">AI Chat</TabsTrigger>
           </TabsList>
           {/* Copy/Download Buttons - Only for Full Transcript tab */}
