@@ -506,6 +506,13 @@ export default function Dashboard() {
             videoUrl={transcriptData.url}
             thumbnailUrl={transcriptData.thumbnailUrl}
             className="max-w-4xl mx-auto"
+            transcriptData={{
+              transcriptTimed: transcriptData.transcriptTimed,
+              transcriptBlocks: transcriptData.transcriptBlocks,
+              title: transcriptData.title,
+              url: transcriptData.url,
+            }}
+            showTranscript={false}
           />
         )}
 
