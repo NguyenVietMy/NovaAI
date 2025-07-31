@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import { AnalyticsDashboard } from "./components/AnalyticsDashboard";
+import DashboardNavbar from "@/components/dashboard-navbar";
 import {
   Card,
   CardContent,
@@ -11,20 +12,23 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 export default function AnalyticsPage() {
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold tracking-tight">
-          Analytics Dashboard
-        </h1>
-        <p className="text-muted-foreground">
-          Track your YouTube transcript analysis activity and see how you
-          compare to other users.
-        </p>
-      </div>
+    <div className="min-h-screen bg-background">
+      <DashboardNavbar />
+      <div className="container mx-auto px-4 py-8">
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold tracking-tight">
+            Analytics Dashboard
+          </h1>
+          <p className="text-muted-foreground">
+            Track your YouTube transcript analysis activity and see how you
+            compare to other users.
+          </p>
+        </div>
 
-      <Suspense fallback={<AnalyticsSkeleton />}>
-        <AnalyticsDashboard />
-      </Suspense>
+        <Suspense fallback={<AnalyticsSkeleton />}>
+          <AnalyticsDashboard />
+        </Suspense>
+      </div>
     </div>
   );
 }
