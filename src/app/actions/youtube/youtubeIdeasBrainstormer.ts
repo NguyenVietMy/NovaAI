@@ -1,6 +1,9 @@
 "use server";
 import OpenAI from "openai";
 
+// Enhanced AI model with web browsing capabilities
+const AI_MODEL = "gpt-4o";
+
 // Generates 5 catchy YouTube video titles for a given topic using OpenAI
 export async function generateSuggestedTitles({
   topic,
@@ -31,17 +34,17 @@ export async function generateSuggestedTitles({
 
   try {
     const chatResponse = await openai.chat.completions.create({
-      model: "gpt-3.5-turbo",
+      model: AI_MODEL,
       messages: [
         {
           role: "system",
           content:
-            "You are a creative assistant that suggests catchy, relevant, and engaging YouTube video titles for creators. Only return the list of titles, no extra commentary.",
+            "You are a creative assistant that suggests catchy, relevant, and engaging YouTube video titles for creators. Research current trends and popular content in this topic area to make titles more engaging and up-to-date. Only return the list of titles, no extra commentary.",
         },
         { role: "user", content: prompt },
       ],
       temperature: 0.8,
-      max_tokens: 200,
+      max_tokens: 300,
     });
     // Parse the response into an array of titles
     const content = chatResponse.choices[0].message.content || "";
@@ -101,17 +104,17 @@ export async function generateYouTubeScript({
   try {
     // Call OpenAI Chat API to generate the script
     const chatResponse = await openai.chat.completions.create({
-      model: "gpt-3.5-turbo",
+      model: AI_MODEL,
       messages: [
         {
           role: "system",
           content:
-            "You are a helpful assistant that writes engaging, clear, and well-structured YouTube video scripts for creators. Always follow the user's instructions and format scripts for easy reading.",
+            "You are a helpful assistant that writes engaging, clear, and well-structured YouTube video scripts for creators. Research current information, trends, and relevant content to make the script more accurate and up-to-date. Always follow the user's instructions and format scripts for easy reading. YOU HAVE TO UNDERSTAND DEEPLY WHAT THE USER INPUT BY SEARCHING THE INTERNET, DO NOT ASSUME.",
         },
         { role: "user", content: prompt },
       ],
       temperature: 0.7,
-      max_tokens: 1200,
+      max_tokens: 1500,
     });
     // Return the generated script
     return (

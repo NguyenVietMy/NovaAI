@@ -263,12 +263,13 @@ const summarizeTranscript = async (text: string): Promise<string> => {
       messages: [
         {
           role: "system",
-          content: "You summarize YouTube transcripts clearly and concisely.",
+          content:
+            "You summarize YouTube transcripts clearly and concisely, providing accurate and insightful summaries.",
         },
         { role: "user", content: prompt },
       ],
       temperature: 0.7,
-      max_tokens: 300,
+      max_tokens: 400,
     });
 
     return (

@@ -38,7 +38,7 @@ export default async function ProjectsPage() {
     <>
       <DashboardNavbar />
       <div className="max-w-3xl mx-auto py-8 px-4">
-        <h1 className="text-2xl font-bold mb-6">Your Projects</h1>
+        <h1 className="text-2xl font-bold mb-6">Your Projects (beta)</h1>
         <div className="mb-6 flex justify-start">
           <ProjectsNewMenu userId={userId} showNewProjectOption={true} />
         </div>

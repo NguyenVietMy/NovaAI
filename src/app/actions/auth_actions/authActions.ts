@@ -162,6 +162,82 @@ export const signOutAction = async () => {
   return redirect("/sign-in");
 };
 
+export const changePasswordAction = async (formData: FormData) => {
+  const supabase = await createClient();
+
+  const currentPassword = formData.get("currentPassword") as string;
+  const newPassword = formData.get("newPassword") as string;
+  const confirmPassword = formData.get("confirmPassword") as string;
+
+  // Validate input
+  if (!currentPassword || !newPassword || !confirmPassword) {
+    return {
+      success: false,
+      message: "All fields are required",
+    };
+  }
+
+  if (newPassword !== confirmPassword) {
+    return {
+      success: false,
+      message: "New passwords do not match",
+    };
+  }
+
+  if (newPassword.length < 6) {
+    return {
+      success: false,
+      message: "New password must be at least 6 characters long",
+    };
+  }
+
+  // Get current user to verify their email
+  const {
+    data: { user: currentUser },
+    error: getUserError,
+  } = await supabase.auth.getUser();
+
+  if (getUserError || !currentUser?.email) {
+    return {
+      success: false,
+      message: "Unable to get current user information",
+    };
+  }
+
+  // First, verify the current password by attempting to sign in
+  const {
+    data: { user },
+    error: signInError,
+  } = await supabase.auth.signInWithPassword({
+    email: currentUser.email,
+    password: currentPassword,
+  });
+
+  if (signInError || !user) {
+    return {
+      success: false,
+      message: "Current password is incorrect",
+    };
+  }
+
+  // Update the password
+  const { error: updateError } = await supabase.auth.updateUser({
+    password: newPassword,
+  });
+
+  if (updateError) {
+    return {
+      success: false,
+      message: "Failed to update password: " + updateError.message,
+    };
+  }
+
+  return {
+    success: true,
+    message: "Password updated successfully",
+  };
+};
+
 export const checkUserSubscription = async (userId: string) => {
   const supabase = await createClient();
 

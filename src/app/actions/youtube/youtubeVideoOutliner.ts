@@ -1,6 +1,9 @@
 "use server";
 import OpenAI from "openai";
 
+// Enhanced AI model with web browsing capabilities
+const AI_MODEL = "gpt-4o";
+
 // Server-side function to generate a video outline and hashtags using GPT-4o
 export async function generateVideoOutline({
   contentType,
@@ -48,17 +51,17 @@ export async function generateVideoOutline({
 
   try {
     const chatResponse = await openai.chat.completions.create({
-      model: "gpt-4o",
+      model: AI_MODEL,
       messages: [
         {
           role: "system",
           content:
-            "You are a helpful assistant that creates clear, actionable, and well-structured YouTube video outlines and relevant hashtags for creators. Always follow the user's instructions and format output as requested.",
+            "You are a helpful assistant that creates clear, actionable, and well-structured YouTube video outlines and relevant hashtags for creators. Research current trends, popular content, and up-to-date information to make the outline more relevant and engaging. Always follow the user's instructions and format output as requested. YOU HAVE TO UNDERSTAND DEEPLY WHAT THE USER INPUT BY SEARCHING THE INTERNET, DO NOT ASSUME.",
         },
         { role: "user", content: prompt },
       ],
       temperature: 0.7,
-      max_tokens: 1200,
+      max_tokens: 1500,
     });
     const content = chatResponse.choices[0].message.content?.trim() || "";
 
