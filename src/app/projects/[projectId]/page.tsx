@@ -38,7 +38,7 @@ export default async function ProjectDashboard({
   }
 
   const userId = user.id;
-  const projects = await listProjects(userId); // TODO: Replace with actual user id from session
+  const projects = await listProjects(userId);
   const project = projects.find((p: Project) => p.id === projectId);
   if (!project) return notFound();
 

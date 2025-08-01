@@ -19,7 +19,9 @@ export async function createItem(
       const { data: userData } = await supabase.auth.getUser();
       const owner_id = userData?.user?.id;
       if (!owner_id) throw new Error("User not authenticated");
-      return await supabase
+
+      // Create the item
+      const { data: newItem, error: insertError } = await supabase
         .from("items")
         .insert([
           {
@@ -33,6 +35,87 @@ export async function createItem(
         ])
         .select()
         .single();
+
+      if (insertError) {
+        throw insertError;
+      }
+
+      if (!newItem) {
+        throw new Error("Failed to create item");
+      }
+
+      // Auto-share the new item with users who have access to the parent folder
+      if (folderId) {
+        try {
+          // Get the folder owner
+          const { data: folderData, error: folderError } = await supabase
+            .from("folders")
+            .select("owner_id")
+            .eq("id", folderId)
+            .single();
+
+          if (!folderError && folderData) {
+            const folderOwnerId = folderData.owner_id;
+            const isItemOwnerAlsoFolderOwner = ownerId === folderOwnerId;
+
+            // Get all users who have access to this folder (not including owner)
+            const { data: folderShares, error: sharesError } = await supabase
+              .from("folder_shares")
+              .select("user_id, permission")
+              .eq("folder_id", folderId);
+
+            if (!sharesError) {
+              const itemShares = [];
+
+              // If the item creator is NOT the folder owner, share with the folder owner
+              if (!isItemOwnerAlsoFolderOwner && folderOwnerId) {
+                itemShares.push({
+                  item_id: newItem.id,
+                  user_id: folderOwnerId,
+                  permission: "view", // Default permission for folder owner
+                });
+              }
+
+              // Share with all other users who have access to the folder
+              if (folderShares && folderShares.length > 0) {
+                folderShares.forEach((share) => {
+                  // Don't duplicate if we already added the folder owner
+                  if (
+                    share.user_id !== folderOwnerId ||
+                    isItemOwnerAlsoFolderOwner
+                  ) {
+                    itemShares.push({
+                      item_id: newItem.id,
+                      user_id: share.user_id,
+                      permission: share.permission,
+                    });
+                  }
+                });
+              }
+
+              // Insert item shares in bulk if there are any
+              if (itemShares.length > 0) {
+                const { error: shareInsertError } = await supabase
+                  .from("item_shares")
+                  .insert(itemShares);
+
+                if (shareInsertError) {
+                  console.error(
+                    "Failed to auto-share item with folder users:",
+                    shareInsertError
+                  );
+                  // Don't throw error here - item creation succeeded, sharing is secondary
+                }
+              }
+            }
+          }
+        } catch (shareError) {
+          console.error("Error in auto-sharing logic:", shareError);
+          // Don't throw error here - item creation succeeded, sharing is secondary
+        }
+      }
+
+      return { data: newItem, error: null };
     },
     projectId ? `/projects/${projectId}` : "/items"
   );
